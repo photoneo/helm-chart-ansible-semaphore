@@ -1,0 +1,162 @@
+{{- if .Values.backup.enabled }}
+{{- if or ( include "semaphore.backup.toGcsStorage" . ) ( include "semaphore.backup.toS3Storage" . ) }}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "semaphore.backup.name" . }}
+  {{- include "semaphore.namespace" . | nindent 2 }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  schedule: {{ include "semaphore.backup.schedule" . }}
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ include "semaphore.backup.activeDeadlineSeconds" . }}
+      template:
+        metadata:
+          labels:
+            {{- include "semaphore.selectorLabels" . | nindent 12 }}
+        spec:
+          restartPolicy: OnFailure
+          initContainers:
+            - name: create-database-dump-file
+              image: "{{ .Values.database.image }}"
+              imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
+              command: [ 'sh', '-c']
+              args:
+                - set -exuv;
+                  echo "${POSTGRES_HOST}:${POSTGRES_PORT}:${POSTGRES_DATABASE}:${POSTGRES_USER}:${POSTGRES_PASSWORD}" > "$HOME/.pgpass";
+                  chmod 600 "$HOME/.pgpass";
+                  sourceFile="/mnt/shared-database-dump/database-dump.sql";
+                  compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
+                  pg_dump --username "${POSTGRES_USER}" --host "${POSTGRES_HOST}" "{{- include "semaphore.backup.postgres.extraOptions" . }}" "${POSTGRES_DATABASE}" > "${sourceFile}";
+                  tar cvzf "${compressedSourceFile}" --directory "$(dirname "${sourceFile}")" .;
+                  ls -lah "${compressedSourceFile}"
+              env:
+                - name: GZIP
+                  value: "-9"
+                - name: POSTGRES_HOST
+                  value: "{{- include "semaphore.service.name" . }}"
+                - name: POSTGRES_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-secrets
+                      key: port
+                - name: POSTGRES_DATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-secrets
+                      key: databaseName
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-secrets
+                      key: userName
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-secrets
+                      key: userPassword
+              volumeMounts:
+                - name: shared-database-dump-directory
+                  mountPath: /mnt/shared-database-dump
+          containers:
+            {{- if include "semaphore.backup.toGcsStorage" . }}
+            - name: postgresql-database-dump-to-google-cloud-storage
+              imagePullPolicy: IfNotPresent
+              image: google/cloud-sdk:slim
+              command: [ 'bash', '-c' ]
+              args:
+                - set -exuv;
+                  compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
+                  filename="/{{- include "semaphore.backup.filenamePrefix" . }}$(date +"{{- include "semaphore.backup.dateFormat" . }}").tar.gz";
+                  gcloud auth activate-service-account "${GCS_SERVICE_ACCOUNT_EMAIL}" --key-file=/tmp/key.json --project="${GCS_PROJECT_ID}";
+                  gsutil cp "${compressedSourceFile}" "gs://${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}"
+              env:
+                - name: GCS_SERVICE_ACCOUNT_EMAIL
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-gcs
+                      key: serviceAccountEmail
+                - name: GCS_PROJECT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-gcs
+                      key: projectId
+                - name: GCS_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-gcs
+                      key: bucket
+                - name: GCS_BUCKET_DIRECTORY
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-gcs
+                      key: bucketDirectory
+              volumeMounts:
+                - name: gcs-key-volume
+                  mountPath: /tmp/key.json
+                  subPath: keyJson
+                - name: shared-database-dump-directory
+                  mountPath: /mnt/shared-database-dump
+            {{- end }}
+            {{- if include "semaphore.backup.toS3Storage" . }}
+            - name: postgresql-database-dump-to-s3-storage
+              imagePullPolicy: IfNotPresent
+              image: minio/mc
+              command: [ 'sh', '-c' ]
+              args:
+                - set -exuv;
+                  compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
+                  filename="/{{- include "semaphore.backup.filenamePrefix" . }}$(date +"{{- include "semaphore.backup.dateFormat" . }}").tar.gz";
+                  aliasName="s3Storage";
+                  mc alias set "${aliasName}" "${S3_HOST}" "${S3_ACCESS_KEY_ID}" "${S3_SECRET_ACCESS_KEY}";
+                  mc cp "${compressedSourceFile}" "${aliasName}/${S3_BUCKET}${S3_PREFIX}${filename}"
+              env:
+                - name: S3_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-s3
+                      key: host
+                - name: S3_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-s3
+                      key: accessKeyId
+                - name: S3_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-s3
+                      key: secretAccessKey
+                - name: S3_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-s3
+                      key: bucket
+                - name: S3_PREFIX
+                  valueFrom:
+                    secretKeyRef:
+                      name: semaphore-database-backup-s3
+                      key: prefix
+              volumeMounts:
+                - name: shared-database-dump-directory
+                  mountPath: /mnt/shared-database-dump
+            {{- end }}
+
+          volumes:
+            {{- if include "semaphore.backup.toGcsStorage" . }}
+            - name: gcs-key-volume
+              secret:
+                secretName: semaphore-database-backup-gcs
+                items:
+                  - key: keyJson
+                    path: key.json
+            {{- end }}
+            - name: shared-database-dump-directory
+              emptyDir: { }
+
+{{- end }}
+{{- end }}

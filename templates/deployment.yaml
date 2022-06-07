@@ -1,0 +1,126 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "semaphore.namespace" . | nindent 2 }}
+  name: {{ include "semaphore.name" . }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "semaphore.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "semaphore.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Always
+      {{- if .Values.database.enabled }}
+      initContainers:
+        - name: database-certificate-creation
+          image: alpine:latest
+          imagePullPolicy: Always
+          command: [ 'sh', '-c' ]
+          args:
+            - apk update;
+              apk add openssl;
+              openssl genrsa -out {{ .Values.databaseCertificate.filename }}.key 4096;
+              openssl req -new -key {{ .Values.databaseCertificate.filename }}.key -out {{ .Values.databaseCertificate.filename }}.csr -subj "/C=/ST=/L=/O=/CN=semaphore.local";
+              openssl x509 -req -days 3650 -in {{ .Values.databaseCertificate.filename }}.csr -signkey {{ .Values.databaseCertificate.filename }}.key -out {{ .Values.databaseCertificate.filename }}.crt;
+              mv postgres.* {{ .Values.databaseCertificate.dir }};
+              chmod -R 600 {{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.key;
+              chmod -R 640 {{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.csr;
+              chmod -R 640 {{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.crt;
+              chown -R "{{ .Values.databaseCertificate.user }}":"{{ .Values.databaseCertificate.group }}" {{ .Values.databaseCertificate.dir }}
+          volumeMounts:
+            - mountPath: {{ .Values.databaseCertificate.dir }}
+              name: database-certificates-volume
+      {{- end }}
+      containers:
+        - name: "semaphore"
+          image: "{{ .Values.semaphore.image }}"
+          imagePullPolicy: "{{ .Values.semaphore.imagePullPolicy }}"
+          command: [ 'sh', '-c' ]
+          args:
+            - while ! nc -w 1 "{{- include "semaphore.database.host" . }}" "{{- include "semaphore.database.port" . }}" ; do echo "waiting for database"; sleep 1; done;
+              semaphore service
+          ports:
+            - containerPort: {{ default 3000 .Values.semaphore.containerPort | int}}
+          volumeMounts:
+            - mountPath: /home/semaphore/config.json
+              name: semaphore-configuration
+              subPath: config.json
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              port: {{ default 3000 .Values.semaphore.containerPort | int }}
+              path: /ping
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              port: {{ default 3000 .Values.semaphore.containerPort | int }}
+              path: /
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 3
+        {{- if .Values.database.enabled }}
+        - name: "semaphore-database"
+          image: "{{ .Values.database.image }}"
+          imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
+          args: [ '-c', 'ssl=on', '-c', 'ssl_cert_file={{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.crt', '-c', 'ssl_key_file={{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.key' ]
+          ports:
+            - containerPort: {{ default 5432 .Values.databaseConfig.port | int }}
+          volumeMounts:
+            {{- if .Values.database.persistenceEnabled }}
+            - mountPath: /var/lib/postgresql/data
+              name: semaphore-database-volume-storage
+            {{- end }}
+            - mountPath: {{ .Values.databaseCertificate.dir }}
+              name: database-certificates-volume
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: databaseName
+                  optional: false
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: userName
+                  optional: false
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: userPassword
+                  optional: false
+          livenessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 3
+            tcpSocket:
+              port: {{ default 5432 .Values.databaseConfig.port | int }}
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            tcpSocket:
+              port: {{ default 5432 .Values.databaseConfig.port | int }}
+        {{- end}}
+      volumes:
+        - name: semaphore-configuration
+          secret:
+            secretName: "{{ include "semaphore.config.secretName" . }}"
+        {{- if .Values.database.enabled }}
+        - name: database-certificates-volume
+          emptyDir: { }
+        {{- if .Values.database.persistenceEnabled }}
+        - name: semaphore-database-volume-storage
+          persistentVolumeClaim:
+            claimName: {{ include "semaphore.database.volume.name" . }}
+        {{- end }}
+        {{- end }}
+

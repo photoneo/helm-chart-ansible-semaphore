@@ -1,0 +1,19 @@
+{{- if .Values.database.enabled }}
+{{- if .Values.database.persistenceEnabled }}
+{{- if not .Values.database.persistentVolumeClaimNameOverride }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  {{- include "semaphore.namespace" . | nindent 2 }}
+  name: {{ include "semaphore.database.volume.name" . }}
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ include "semaphore.database.volume.size" . }}
+{{- end }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,24 @@
+{{- if .Values.semaphoreIngress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- include "semaphore.namespace" . | nindent 2 }}
+  name: {{ include "semaphore.name" . }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  rules:
+    - http:
+        paths:
+          - path: "{{ default "/semaphore/" .Values.urlConfig.path }}"
+            pathType: "{{ default "Prefix" .Values.semaphoreIngress.pathType }}"
+            backend:
+              service:
+                name: {{ include "semaphore.service.name" . }}
+                port:
+                  number: {{ .Values.semaphoreService.port | int }}
+      {{- if .Values.urlConfig.host }}
+      host: "{{ .Values.urlConfig.host }}"
+      {{- end }}
+{{- end }}

@@ -1,0 +1,27 @@
+{{- if .Values.database.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "semaphore.namespace" . | nindent 2 }}
+  name: {{ include "semaphore.service.name" . }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.semaphoreService.type }}
+  selector:
+    {{- include "semaphore.selectorLabels" . | nindent 4 }}
+  ports:
+    - port: {{ default 3000 .Values.semaphoreService.port | int }}
+      targetPort: {{ default 3000 .Values.semaphore.containerPort | int }}
+      protocol: TCP
+      name: http
+    {{- if .Values.database.enabled }}
+    {{- if .Values.backup.enabled }}
+    - port: {{ default 5432 .Values.databaseConfig.port | int }}
+      targetPort: {{ default 5432 .Values.databaseConfig.containerPort | int }}
+      protocol: TCP
+      name: database
+    {{- end }}
+    {{- end }}
+{{- end }}
