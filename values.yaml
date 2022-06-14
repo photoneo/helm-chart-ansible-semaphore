@@ -1,57 +1,41 @@
 ---
 
+fullnameOverride: ""
+nameOverride: ""
 namespaceOverride: ""
 chartNameOverride: ""
 
-emailConfig:
-  sender: ""
-  host: ""
-  port: ""
-  userName: ""
-  userPassword: ""
-
-
-databaseConfig:
-  dialect: ""
-  host: ""
-  port: ""
-  databaseName: ""
-  userName: ""
-  userPassword: ""
-
-
-# note:
-# - all items are required if ingress is enabled
-#   - due to semaphore configuration option "web_host"": https://docs.ansible-semaphore.com/administration-guide/configuration#configuration-file
-urlConfig:
-  protocol: "http"
-  # cannot be ip address must be domain/hostname
-  host: "minikube.local"
-  path: "/semaphore"
-
-
-# configuration for semaphore application
 semaphore:
   image: "ansiblesemaphore/semaphore:v2.8.22"
   imagePullPolicy: "IfNotPresent"
   containerPort: 3000
-  emailAlerts: false
 
+config:
+  web_host: ""
+  email_alert: false
+  email_host: ""
+  email_port: ""
+  email_username: ""
+  email_userpassword: ""
+  email_sender: ""
 
-# configuration for k8s semaphore service
-semaphoreService:
+service:
   enabled: true
   type: ClusterIP
   port: 3000
 
-
-# configuration for k8s semaphore ingress
-semaphoreIngress:
+ingress:
   enabled: true
-  pathType: "Prefix"
+  labels: {}
+  annotations: {}
+  ingressClassName: nginx
+  path: "/"
+  hostName:
+  tls:
+    # - secretName: semaphore.example.com
+    #   hosts:
+    #     - semaphore.example.com
 
-
-# create database for semaphore application
 database:
   enabled: true
   image: "postgres:14-alpine"
@@ -60,33 +44,22 @@ database:
   containerPort: 5432
   persistenceEnabled: true
   persistentVolumeClaimNameOverride: ""
+  config:
+    host: "localhost"
+    port: 5432
+    databaseName: "semaphore"
+    userName: ""
+    userPassword: ""
 
-
-# configuration for certificate creation
-databaseCertificate:
-  dir: "/var/lib/postgresql/database-certificates"
-  user: 70
-  group: 70
-  filename: "postgres"
-
-
-# configuration for creating and uploading backups
 backup:
   enabled: false
   schedule: ""
   activeDeadlineSeconds: ""
-  s3:
-    # full url in format: "{protocol}://{host}:{port}"
-    host: "http://minio-1650448152:9000"
-    bucket: ""
-    prefix: "/"
-    accessKeyId: ""
-    secretAccessKey: ""
-  gcs:
-    projectId: "projectId"
-    keyJson: '{"type": "service_account","project_id": "{same value as project id}","private_key_id": "{value}","private_key": "-----BEGIN PRIVATE KEY-----<CONTENT>-----END PRIVATE KEY-----\n", "client_email": "{same value as serviceAccountEmail}", "client_id": "{value}", "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token", "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs", "client_x509_cert_url": "{value}"}'
+  gcp:
+    projectId: ""
+    keyJson: "{}"
     serviceAccountEmail: ""
-    bucket: "<bucket_name>"
-    bucketDirectory: "<directory in the bucket>"
+    bucket: ""
+    bucketDirectory: ""
   postgresql:
     extraOptions: ""

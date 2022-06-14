@@ -1,18 +1,28 @@
 {{/*
- Override of namespace value
-*/}}
-{{- define "semaphore.namespace" -}}
-{{- if .Values.namespaceOverride }}
-namespace: {{ .Values.namespaceOverride }}
-{{- end }}
-{{- end }}
-
-{{/*
 Expand the name of the chart.
 */}}
 {{- define "semaphore.name" -}}
 {{- default .Chart.Name .Values.chartNameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
+
+
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "semaphore.fullname" -}}
+{{- if .Values.fullnameOverride -}}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 
 
 {{/*
@@ -24,13 +34,15 @@ Create chart name and version as used by the chart label.
 
 
 {{/*
-url in format {protocol}://{host}{path} on which semaphore will be available to public
+Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
 */}}
-{{- define "semaphore.config.webHost" }}
-{{- if .Values.semaphoreIngress.enabled }}
-{{- printf "%s://%s%s" .Values.urlConfig.protocol .Values.urlConfig.host .Values.urlConfig.path }}
-{{- end }}
-{{- end }}
+{{- define "semaphore.namespace" -}}
+  {{- if .Values.namespaceOverride -}}
+    {{- .Values.namespaceOverride -}}
+  {{- else -}}
+    {{- .Release.Namespace -}}
+  {{- end -}}
+{{- end -}}
 
 
 {{/*
@@ -59,7 +71,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 Database name value
 */}}
 {{- define "semaphore.database.name" -}}
-{{- default "semaphore_database" .Values.databaseConfig.databaseName }}
+{{- default "semaphore_database" .Values.database.config.databaseName }}
 {{- end }}
 
 
@@ -67,7 +79,7 @@ Database name value
 Database user name value
 */}}
 {{- define "semaphore.database.userName" -}}
-{{- default "semaphore_user" .Values.databaseConfig.userName }}
+{{- default "semaphore_user" .Values.database.config.userName }}
 {{- end }}
 
 
@@ -76,23 +88,23 @@ Database user password value
 */}}
 {{- define "semaphore.database.userPassword" -}}
 {{- $generatedPassword := randAlphaNum 64 }}
-{{- default $generatedPassword .Values.databaseConfig.userPassword }}
+{{- default $generatedPassword .Values.database.config.userPassword }}
 {{- end }}
 
 
 {{/*
-Database user password value
+Database host value
 */}}
 {{- define "semaphore.database.host" -}}
-{{- default "localhost" .Values.databaseConfig.host }}
+{{- default "localhost" .Values.database.config.host }}
 {{- end }}
 
 
 {{/*
-Database user password value
+Database port value
 */}}
 {{- define "semaphore.database.port" -}}
-{{- default 5432 .Values.databaseConfig.port | int }}
+{{- default 5432 .Values.database.config.port | int }}
 {{- end }}
 
 
@@ -150,37 +162,15 @@ Semaphore database backup cronjob max allowed time to be alive / time to live / 
 
 
 {{/*
-Semaphore database backup to s3 storage
-*/}}
-{{- define "semaphore.backup.toS3Storage" -}}
-{{- if .Values.backup }}
-{{- if .Values.backup.s3 }}
-{{- if .Values.backup.s3.accessKeyId }}
-{{- if .Values.backup.s3.secretAccessKey }}
-{{- if .Values.backup.s3.host }}
-{{- if .Values.backup.s3.bucket }}
-{{- if .Values.backup.s3.prefix }}
-true
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-
-{{/*
-Semaphore database backup to gcs storage
+Semaphore database backup to gcp storage
 */}}
 {{- define "semaphore.backup.toGcsStorage" -}}
 {{- if .Values.backup }}
-{{- if .Values.backup.gcs }}
-{{- if .Values.backup.gcs.projectId }}
-{{- if .Values.backup.gcs.keyJson }}
-{{- if .Values.backup.gcs.serviceAccountEmail }}
-{{- if .Values.backup.gcs.bucket }}
+{{- if .Values.backup.gcp }}
+{{- if .Values.backup.gcp.projectId }}
+{{- if .Values.backup.gcp.keyJson }}
+{{- if .Values.backup.gcp.serviceAccountEmail }}
+{{- if .Values.backup.gcp.bucket }}
 true
 {{- end }}
 {{- end }}
@@ -222,5 +212,3 @@ Semaphore service name
 {{ $baseName := include "semaphore.name" . }}
 {{- printf "%s-%s" $baseName "service" }}
 {{- end }}
-
-

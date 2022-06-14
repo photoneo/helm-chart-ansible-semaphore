@@ -5,7 +5,7 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: {{ include "semaphore.backup.name" . }}
-  {{- include "semaphore.namespace" . | nindent 2 }}
+  namespace: {{ template "semaphore.namespace" . }}
   labels:
     {{- include "semaphore.labels" . | nindent 4 }}
 spec:
@@ -79,78 +79,35 @@ spec:
                 - name: GCS_SERVICE_ACCOUNT_EMAIL
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcs
+                      name: semaphore-database-backup-gcp
                       key: serviceAccountEmail
                 - name: GCS_PROJECT_ID
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcs
+                      name: semaphore-database-backup-gcp
                       key: projectId
                 - name: GCS_BUCKET
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcs
+                      name: semaphore-database-backup-gcp
                       key: bucket
                 - name: GCS_BUCKET_DIRECTORY
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcs
+                      name: semaphore-database-backup-gcp
                       key: bucketDirectory
               volumeMounts:
-                - name: gcs-key-volume
+                - name: gcp-key-volume
                   mountPath: /tmp/key.json
                   subPath: keyJson
                 - name: shared-database-dump-directory
                   mountPath: /mnt/shared-database-dump
             {{- end }}
-            {{- if include "semaphore.backup.toS3Storage" . }}
-            - name: postgresql-database-dump-to-s3-storage
-              imagePullPolicy: IfNotPresent
-              image: minio/mc
-              command: [ 'sh', '-c' ]
-              args:
-                - set -exuv;
-                  compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
-                  filename="/{{- include "semaphore.backup.filenamePrefix" . }}$(date +"{{- include "semaphore.backup.dateFormat" . }}").tar.gz";
-                  aliasName="s3Storage";
-                  mc alias set "${aliasName}" "${S3_HOST}" "${S3_ACCESS_KEY_ID}" "${S3_SECRET_ACCESS_KEY}";
-                  mc cp "${compressedSourceFile}" "${aliasName}/${S3_BUCKET}${S3_PREFIX}${filename}"
-              env:
-                - name: S3_HOST
-                  valueFrom:
-                    secretKeyRef:
-                      name: semaphore-database-backup-s3
-                      key: host
-                - name: S3_ACCESS_KEY_ID
-                  valueFrom:
-                    secretKeyRef:
-                      name: semaphore-database-backup-s3
-                      key: accessKeyId
-                - name: S3_SECRET_ACCESS_KEY
-                  valueFrom:
-                    secretKeyRef:
-                      name: semaphore-database-backup-s3
-                      key: secretAccessKey
-                - name: S3_BUCKET
-                  valueFrom:
-                    secretKeyRef:
-                      name: semaphore-database-backup-s3
-                      key: bucket
-                - name: S3_PREFIX
-                  valueFrom:
-                    secretKeyRef:
-                      name: semaphore-database-backup-s3
-                      key: prefix
-              volumeMounts:
-                - name: shared-database-dump-directory
-                  mountPath: /mnt/shared-database-dump
-            {{- end }}
-
           volumes:
             {{- if include "semaphore.backup.toGcsStorage" . }}
-            - name: gcs-key-volume
+            - name: gcp-key-volume
               secret:
-                secretName: semaphore-database-backup-gcs
+                secretName: semaphore-database-backup-gcp
                 items:
                   - key: keyJson
                     path: key.json

@@ -1,24 +1,58 @@
-{{- if .Values.semaphoreIngress.enabled }}
+{{- if .Values.ingress.enabled }}
 ---
+
+{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.Version -}}
 apiVersion: networking.k8s.io/v1
+{{- else if semverCompare ">=1.14-0" .Capabilities.KubeVersion.Version -}}
+apiVersion: networking.k8s.io/v1beta1
+{{- else -}}
+apiVersion: "extensions/v1beta1"
+{{- end }}
 kind: Ingress
 metadata:
-  {{- include "semaphore.namespace" . | nindent 2 }}
-  name: {{ include "semaphore.name" . }}
+  namespace: {{ template "semaphore.namespace" . }}
   labels:
-    {{- include "semaphore.labels" . | nindent 4 }}
+    "app.kubernetes.io/name": '{{ template "semaphore.name" .}}'
+    "app.kubernetes.io/managed-by": "{{ .Release.Service }}"
+    "app.kubernetes.io/instance": "{{ .Release.Name }}"
+    "app.kubernetes.io/component": "{{ .Values.componentName }}"
+    {{- if .Values.renderHelmLabels }}
+    "helm.sh/chart": "{{ template "semaphore.label" .}}"
+    {{- end }}
+{{- if .Values.ingress.labels }}
+{{ toYaml .Values.ingress.labels | indent 4 }}
+{{- end }}
+{{- if .Values.ingress.annotations }}
+  annotations:
+{{ toYaml .Values.ingress.annotations | indent 4 }}
+{{- end }}
+  name: {{ template "semaphore.fullname" . }}
 spec:
+{{- if and .Values.ingress.ingressClassName (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
+{{- end }}
   rules:
-    - http:
-        paths:
-          - path: "{{ default "/semaphore/" .Values.urlConfig.path }}"
-            pathType: "{{ default "Prefix" .Values.semaphoreIngress.pathType }}"
-            backend:
-              service:
-                name: {{ include "semaphore.service.name" . }}
-                port:
-                  number: {{ .Values.semaphoreService.port | int }}
-      {{- if .Values.urlConfig.host }}
-      host: "{{ .Values.urlConfig.host }}"
-      {{- end }}
+  - http:
+      paths:
+      - backend:
+{{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
+          service:
+            name: {{ template "semaphore.fullname" . }}
+            port:
+              number: {{ .Values.service.port }}
+        pathType: "{{ default "Prefix" .Values.ingress.pathType }}"
+{{- else }}
+          serviceName: {{ template "semaphore.fullname" . }}
+          servicePort: {{ .Values.service.port }}
+{{- end }}
+{{- if .Values.ingress.path }}
+        path: {{ .Values.ingress.path }}
+{{- end -}}
+{{- if .Values.ingress.hostName }}
+    host: {{ .Values.ingress.hostName | quote }}
+{{- end }}
+{{- if .Values.ingress.tls }}
+  tls:
+{{ toYaml .Values.ingress.tls | indent 4 }}
+{{- end -}}
 {{- end }}

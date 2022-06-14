@@ -1,8 +1,14 @@
 ---
+
+{{ $dbCertificateDir := "/var/lib/postgresql/database-certificates" }}
+{{ $dbCertificateFilename := "postgres" }}
+{{ $dbUser := 70 }}
+{{ $dbGroup := 70 }}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  {{- include "semaphore.namespace" . | nindent 2 }}
+  namespace: {{ template "semaphore.namespace" . }}
   name: {{ include "semaphore.name" . }}
   labels:
     {{- include "semaphore.labels" . | nindent 4 }}
@@ -25,16 +31,16 @@ spec:
           args:
             - apk update;
               apk add openssl;
-              openssl genrsa -out {{ .Values.databaseCertificate.filename }}.key 4096;
-              openssl req -new -key {{ .Values.databaseCertificate.filename }}.key -out {{ .Values.databaseCertificate.filename }}.csr -subj "/C=/ST=/L=/O=/CN=semaphore.local";
-              openssl x509 -req -days 3650 -in {{ .Values.databaseCertificate.filename }}.csr -signkey {{ .Values.databaseCertificate.filename }}.key -out {{ .Values.databaseCertificate.filename }}.crt;
-              mv postgres.* {{ .Values.databaseCertificate.dir }};
-              chmod -R 600 {{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.key;
-              chmod -R 640 {{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.csr;
-              chmod -R 640 {{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.crt;
-              chown -R "{{ .Values.databaseCertificate.user }}":"{{ .Values.databaseCertificate.group }}" {{ .Values.databaseCertificate.dir }}
+              openssl genrsa -out {{ $dbCertificateFilename }}.key 4096;
+              openssl req -new -key {{ $dbCertificateFilename }}.key -out {{ $dbCertificateFilename }}.csr -subj "/C=/ST=/L=/O=/CN=semaphore.local";
+              openssl x509 -req -days 3650 -in {{ $dbCertificateFilename }}.csr -signkey {{ $dbCertificateFilename }}.key -out {{ $dbCertificateFilename }}.crt;
+              mv postgres.* {{ $dbCertificateDir }};
+              chmod -R 600 {{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.key;
+              chmod -R 640 {{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.csr;
+              chmod -R 640 {{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.crt;
+              chown -R "{{ $dbUser }}":"{{ $dbGroup }}" {{ $dbCertificateDir }}
           volumeMounts:
-            - mountPath: {{ .Values.databaseCertificate.dir }}
+            - mountPath: {{ $dbCertificateDir }}
               name: database-certificates-volume
       {{- end }}
       containers:
@@ -70,15 +76,15 @@ spec:
         - name: "semaphore-database"
           image: "{{ .Values.database.image }}"
           imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
-          args: [ '-c', 'ssl=on', '-c', 'ssl_cert_file={{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.crt', '-c', 'ssl_key_file={{ .Values.databaseCertificate.dir }}/{{ .Values.databaseCertificate.filename }}.key' ]
+          args: [ '-c', 'ssl=on', '-c', 'ssl_cert_file={{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.crt', '-c', 'ssl_key_file={{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.key' ]
           ports:
-            - containerPort: {{ default 5432 .Values.databaseConfig.port | int }}
+            - containerPort: {{ default 5432 .Values.database.containerPort | int }}
           volumeMounts:
             {{- if .Values.database.persistenceEnabled }}
             - mountPath: /var/lib/postgresql/data
               name: semaphore-database-volume-storage
             {{- end }}
-            - mountPath: {{ .Values.databaseCertificate.dir }}
+            - mountPath: {{ $dbCertificateDir }}
               name: database-certificates-volume
           env:
             - name: POSTGRES_DB
@@ -103,12 +109,12 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 3
             tcpSocket:
-              port: {{ default 5432 .Values.databaseConfig.port | int }}
+              port: {{ default 5432 .Values.database.containerPort | int }}
           readinessProbe:
             initialDelaySeconds: 5
             periodSeconds: 3
             tcpSocket:
-              port: {{ default 5432 .Values.databaseConfig.port | int }}
+              port: {{ default 5432 .Values.database.containerPort | int }}
         {{- end}}
       volumes:
         - name: semaphore-configuration
@@ -123,4 +129,3 @@ spec:
             claimName: {{ include "semaphore.database.volume.name" . }}
         {{- end }}
         {{- end }}
-
