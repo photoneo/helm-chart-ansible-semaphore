@@ -37,7 +37,7 @@ spec:
       - backend:
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
           service:
-            name: {{ template "semaphore.fullname" . }}
+            name: {{ include "semaphore.service.name" . }}
             port:
               number: {{ .Values.service.port }}
         pathType: "{{ default "Prefix" .Values.ingress.pathType }}"
