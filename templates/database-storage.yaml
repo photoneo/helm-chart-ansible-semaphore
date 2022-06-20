@@ -8,7 +8,6 @@ metadata:
   namespace: {{ template "semaphore.namespace" . }}
   name: {{ include "semaphore.database.volume.name" . }}
 spec:
-  storageClassName: standard
   accessModes:
     - ReadWriteOnce
   resources:

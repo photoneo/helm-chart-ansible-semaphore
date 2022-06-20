@@ -83,6 +83,7 @@ spec:
             {{- if .Values.database.persistenceEnabled }}
             - mountPath: /var/lib/postgresql/data
               name: semaphore-database-volume-storage
+              subPath: postgres
             {{- end }}
             - mountPath: {{ $dbCertificateDir }}
               name: database-certificates-volume
