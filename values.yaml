@@ -30,7 +30,7 @@ ingress:
   annotations: {}
   ingressClassName: nginx
   path: "/"
-  hostName:
+  hostName: "semaphore.example.com"
   tls:
     # - secretName: semaphore.example.com
     #   hosts:
