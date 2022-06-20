@@ -1,6 +1,6 @@
 1. Create first admin user using command:
   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "semaphore.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  kubectl exec $POD_NAME --container semaphore --namespace {{ .Release.Namespace }} --semaphore user add --admin --login admin --name="admin admin" --email="admin@example.com" --password="mypassword123"
+  kubectl exec $POD_NAME --container semaphore --namespace {{ .Release.Namespace }} -- semaphore user add --admin --login admin --name="admin" --email="admin@example.com" --password="mypassword123"
 
 2. Get the application URL by running these commands:
 {{- if .Values.ingress.enabled }}
