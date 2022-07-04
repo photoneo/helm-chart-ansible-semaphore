@@ -1,4 +1,6 @@
 # Helm for Ansible Semaphore
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/semaphore)](https://artifacthub.io/packages/search?repo=semaphore)
+
 [Ansible Semaphore](https://ansible-semaphore.com/) is a moder graphical UI for Ansible.
 
 
