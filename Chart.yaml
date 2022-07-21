@@ -1,9 +1,13 @@
+---
+
 apiVersion: v2
 name: semaphore
-description: A Helm chart for deploying semaphore with(out) database and periodical backups.
+description: |
+  A Helm chart for deploying semaphore with(out) database and periodical
+  backups.
 
 type: application
 
-version: 0.1.0
+version: 0.1.1
 
 appVersion: 2.8.22
