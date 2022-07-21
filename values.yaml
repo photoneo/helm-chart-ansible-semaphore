@@ -10,6 +10,9 @@ semaphore:
   imagePullPolicy: "IfNotPresent"
   containerPort: 3000
 
+# created as: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys
+existingSecretSSHDir: ""
+
 config:
   web_host: ""
   email_alert: false

@@ -80,6 +80,11 @@ spec:
           ports:
             - containerPort: {{ default 5432 .Values.database.containerPort | int }}
           volumeMounts:
+            {{- if .Values.existingSecretSSHDir }}
+            - name: ssh-keys
+              readOnly: true
+              mountPath: "/home/semaphore/.ssh/"
+            {{- end }}
             {{- if .Values.database.persistenceEnabled }}
             - mountPath: /var/lib/postgresql/data
               name: semaphore-database-volume-storage
@@ -121,6 +126,11 @@ spec:
         - name: semaphore-configuration
           secret:
             secretName: "{{ include "semaphore.config.secretName" . }}"
+        {{- if .Values.existingSecretSSHDir }}
+        - name: ssh-keys
+          secret:
+            secretName: {{ .Values.existingSecretSSHDir }}
+        {{- end }}
         {{- if .Values.database.enabled }}
         - name: database-certificates-volume
           emptyDir: { }
