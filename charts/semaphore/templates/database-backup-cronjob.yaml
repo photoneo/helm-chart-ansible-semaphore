@@ -23,7 +23,7 @@ spec:
           restartPolicy: OnFailure
           initContainers:
             - name: create-database-dump-file
-              image: "{{ .Values.database.image }}"
+              image: "{{ .Values.database.image.name }}:{{ .Values.database.image.tag }}"
               imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
               command: [ 'sh', '-c']
               args:
@@ -67,7 +67,7 @@ spec:
             {{- if include "semaphore.backup.toGcsStorage" . }}
             - name: postgresql-database-dump-to-google-cloud-storage
               imagePullPolicy: IfNotPresent
-              image: google/cloud-sdk:slim
+              image: "{{ .Values.backup.image.name }}:{{ .Values.backup.image.tag }}}"
               command: [ 'bash', '-c' ]
               args:
                 - set -exuv;
@@ -97,7 +97,7 @@ spec:
                       name: semaphore-database-backup-gcp
                       key: bucketDirectory
               volumeMounts:
-                - name: gcp-key-volume
+                - name: gcp-backup-key-volume
                   mountPath: /tmp/key.json
                   subPath: keyJson
                 - name: shared-database-dump-directory
@@ -105,7 +105,7 @@ spec:
             {{- end }}
           volumes:
             {{- if include "semaphore.backup.toGcsStorage" . }}
-            - name: gcp-key-volume
+            - name: gcp-backup-key-volume
               secret:
                 secretName: semaphore-database-backup-gcp
                 items:

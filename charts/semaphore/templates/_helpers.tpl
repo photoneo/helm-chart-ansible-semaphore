@@ -166,12 +166,16 @@ Semaphore database backup to gcp storage
 */}}
 {{- define "semaphore.backup.toGcsStorage" -}}
 {{- if .Values.backup }}
+{{- if .Values.backup.enabled }}
 {{- if .Values.backup.gcp }}
 {{- if .Values.backup.gcp.projectId }}
 {{- if .Values.backup.gcp.keyJson }}
 {{- if .Values.backup.gcp.serviceAccountEmail }}
 {{- if .Values.backup.gcp.bucket }}
+{{- if .Values.backup.gcp.bucketDirectory }}
 true
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -211,4 +215,31 @@ Semaphore service name
 {{- define "semaphore.service.name" -}}
 {{ $baseName := include "semaphore.name" . }}
 {{- printf "%s-%s" $baseName "service" }}
+{{- end }}
+
+{{/*
+Semaphore database restore postgresql extra options
+*/}}
+{{- define "semaphore.restore.postgres.extraOptions" -}}
+{{- default "-Ft -C" .Values.backup.postgresql.extraOptions }}
+{{- end }}
+
+{{- define "semaphore.restore.fromGcsStorage" -}}
+{{- if .Values.restore }}
+{{- if .Values.restore.enabled }}
+{{- if .Values.restore.gcp }}
+{{- if .Values.restore.gcp.projectId }}
+{{- if .Values.restore.gcp.keyJson }}
+{{- if .Values.restore.gcp.serviceAccountEmail }}
+{{- if .Values.restore.gcp.bucket }}
+{{- if .Values.restore.gcp.bucketDirectory }}
+true
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end }}

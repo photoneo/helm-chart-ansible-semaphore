@@ -6,7 +6,9 @@ namespaceOverride: ""
 chartNameOverride: ""
 
 semaphore:
-  image: "ansiblesemaphore/semaphore:v2.8.53"
+  image:
+    name: "ansiblesemaphore/semaphore"
+    tag: "v2.8.22"
   imagePullPolicy: "IfNotPresent"
   containerPort: 3000
 
@@ -41,12 +43,17 @@ ingress:
 
 database:
   enabled: true
-  image: "postgres:14-alpine"
+  image:
+    name: "postgres"
+    tag: "14-alpine"
   imagePullPolicy: "IfNotPresent"
   volumeSize: 10Gi
   containerPort: 5432
   persistenceEnabled: true
   persistentVolumeClaimNameOverride: ""
+  permissions:
+    userId: 70
+    groupId: 70
   config:
     host: "localhost"
     port: 5432
@@ -54,10 +61,27 @@ database:
     userName: ""
     userPassword: ""
 
+restore:
+  enabled: false
+  image:
+    name: "google/cloud-sdk"
+    tag: "slim"
+  # file name without extension located on gcs_storage/bucket/directory
+  baseFilename: "database-dump"
+  gcp:
+    projectId: ""
+    keyJson: "{}"
+    serviceAccountEmail: ""
+    bucket: ""
+    bucketDirectory: ""
+
 backup:
   enabled: false
   schedule: ""
   activeDeadlineSeconds: ""
+  image:
+    name: "google/cloud-sdk"
+    tag: "slim"
   gcp:
     projectId: ""
     keyJson: "{}"
