@@ -2,8 +2,6 @@
 
 {{ $dbCertificateDir := "/var/lib/postgresql/database-certificates" }}
 {{ $dbCertificateFilename := "postgres" }}
-{{ $dbUser := 70 }}
-{{ $dbGroup := 70 }}
 
 apiVersion: apps/v1
 kind: Deployment
@@ -22,8 +20,86 @@ spec:
         {{- include "semaphore.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: Always
-      {{- if .Values.database.enabled }}
+      {{- if or .Values.database.enabled (include "semaphore.restore.fromGcsStorage" . ) }}
       initContainers:
+        {{- if include "semaphore.restore.fromGcsStorage" . }}
+        - name: download-database-dump-file
+          image: "{{ .Values.restore.image.name }}:{{ .Values.restore.image.tag }}"
+          imagePullPolicy: Always
+          command: [ 'bash', '-c' ]
+          args:
+            - set -xuv;
+              filename="/{{ .Values.restore.baseFilename }}.tar.gz";
+              file="/tmp/dump${filename}"
+              gcloud auth activate-service-account "${GCS_SERVICE_ACCOUNT_EMAIL}" --key-file=/tmp/key.json --project="${GCS_PROJECT_ID}";
+              gsutil cp "gs://${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}" "${file}"
+          env:
+            - name: GCS_SERVICE_ACCOUNT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-restore-gcp
+                  key: serviceAccountEmail
+            - name: GCS_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-restore-gcp
+                  key: projectId
+            - name: GCS_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-restore-gcp
+                  key: bucket
+            - name: GCS_BUCKET_DIRECTORY
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-restore-gcp
+                  key: bucketDirectory
+          volumeMounts:
+            - mountPath: /tmp/dump
+              name: shared-database-restore-directory
+            - name: gcp-restore-key-volume
+              mountPath: /tmp/key.json
+              subPath: keyJson
+        - name: restore-database-from-dump-file
+          image: "{{ .Values.database.image.name }}:{{ .Values.database.image.tag }}"
+          imagePullPolicy: Always
+          command: [ 'sh', '-c' ]
+          args:
+            - set -exuv;
+              echo "${POSTGRES_HOST}:${POSTGRES_PORT}:${POSTGRES_DATABASE}:${POSTGRES_USER}:${POSTGRES_PASSWORD}" > "$HOME/.pgpass";
+              chmod 600 "$HOME/.pgpass";
+              - while ! nc -w 1 "${POSTGRES_HOST}" "${POSTGRES_PORT}" ; do echo "waiting for database"; sleep 1; done;
+              cd /tmp/dump;
+              tar zxvf "{{ .Values.restore.baseFilename }}.tar.gz";
+              pg_restore -U "${POSTGRES_USER} "{{- include "semaphore.backup.postgres.extraOptions" . }}" -d "${POSTGRES_DATABASE} < "{{ .Values.restore.baseFilename }}.sql"
+          env:
+            - name: POSTGRES_HOST
+              value: "{{- include "semaphore.service.name" . }}"
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: port
+            - name: POSTGRES_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: databaseName
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: userName
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: semaphore-database-secrets
+                  key: userPassword
+          volumeMounts:
+            - mountPath: /tmp/dump
+              name: shared-database-restore-directory
+        {{- end }}
+        {{- if .Values.database.enabled }}
         - name: database-certificate-creation
           image: alpine:latest
           imagePullPolicy: Always
@@ -38,14 +114,15 @@ spec:
               chmod -R 600 {{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.key;
               chmod -R 640 {{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.csr;
               chmod -R 640 {{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.crt;
-              chown -R "{{ $dbUser }}":"{{ $dbGroup }}" {{ $dbCertificateDir }}
+              chown -R "{{ .Values.database.permissions.userId }}":"{{ .Values.database.permissions.groupId }}" {{ $dbCertificateDir }}
           volumeMounts:
             - mountPath: {{ $dbCertificateDir }}
               name: database-certificates-volume
+        {{- end }}
       {{- end }}
       containers:
         - name: "semaphore"
-          image: "{{ .Values.semaphore.image }}"
+          image: "{{ .Values.semaphore.image.name }}:{{ .Values.semaphore.image.tag }}"
           imagePullPolicy: "{{ .Values.semaphore.imagePullPolicy }}"
           command: [ 'sh', '-c' ]
           args:
@@ -74,7 +151,7 @@ spec:
             periodSeconds: 3
         {{- if .Values.database.enabled }}
         - name: "semaphore-database"
-          image: "{{ .Values.database.image }}"
+          image: "{{ .Values.database.image.name }}:{{ .Values.database.image.tag }}"
           imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
           args: [ '-c', 'ssl=on', '-c', 'ssl_cert_file={{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.crt', '-c', 'ssl_key_file={{ $dbCertificateDir }}/{{ $dbCertificateFilename }}.key' ]
           ports:
@@ -139,4 +216,16 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "semaphore.database.volume.name" . }}
         {{- end }}
+        {{- end }}
+        {{- if .Values.restore.enabled }}
+        - name: shared-database-restore-directory
+          emptyDir: { }
+        {{- end }}
+        {{- if include "semaphore.restore.fromGcsStorage" . }}
+        - name: gcp-restore-key-volume
+          secret:
+            secretName: semaphore-database-restore-gcp
+            items:
+              - key: keyJson
+                path: key.json
         {{- end }}
