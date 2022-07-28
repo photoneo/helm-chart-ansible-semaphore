@@ -35,9 +35,15 @@ spec:
               sed -i "s/##USER_PASSWORD##/${POSTGRES_PASSWORD}/" /tmp/config/config.json;
           env:
             - name: POSTGRES_HOST
-              value: "{{- include "semaphore.database.name" . }}"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.host }}"
             - name: POSTGRES_PORT
-              value: "{{ default 5432 .Values.database.service.port | int}}"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.port }}"
             - name: POSTGRES_DATABASE
               valueFrom:
                 secretKeyRef:
@@ -111,9 +117,15 @@ spec:
               pg_restore -U "${POSTGRES_USER} "{{- include "semaphore.restore.pg_restore.extraOptions" . }}" -d "${POSTGRES_DATABASE} < "{{ .Values.restore.baseFilename }}.sql"
           env:
             - name: POSTGRES_HOST
-              value: "{{- include "semaphore.database.name" . }}"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.host }}"
             - name: POSTGRES_PORT
-              value: "{{ default 5432 .Values.database.service.port | int}}"
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.port }}"
             - name: POSTGRES_DATABASE
               valueFrom:
                 secretKeyRef:

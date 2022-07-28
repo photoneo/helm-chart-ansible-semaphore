@@ -39,27 +39,30 @@ spec:
                 - name: GZIP
                   value: "-9"
                 - name: POSTGRES_HOST
-                  value: "{{- include "semaphore.service.name" . }}"
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.database.secret.name }}
+                      key: {{ .Values.database.secret.keys.host }}
                 - name: POSTGRES_PORT
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-secrets
-                      key: port
+                      name: {{ .Values.database.secret.name }}
+                      key: {{ .Values.database.secret.keys.port }}
                 - name: POSTGRES_DATABASE
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-secrets
-                      key: databaseName
+                      name: {{ .Values.database.secret.name }}
+                      key: {{ .Values.database.secret.keys.databaseName }}
                 - name: POSTGRES_USER
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-secrets
-                      key: userName
+                      name: {{ .Values.database.secret.name }}
+                      key: {{ .Values.database.secret.keys.username }}
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-secrets
-                      key: userPassword
+                      name: {{ .Values.database.secret.name }}
+                      key: {{ .Values.database.secret.keys.password }}
               volumeMounts:
                 - name: shared-database-dump-directory
                   mountPath: /mnt/shared-database-dump
@@ -79,27 +82,27 @@ spec:
                 - name: GCS_SERVICE_ACCOUNT_EMAIL
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcp
-                      key: serviceAccountEmail
+                      name: {{ .Values.backup.secret.name }}
+                      key: {{ .Values.backup.secret.keys.serviceAccountEmail }}
                 - name: GCS_PROJECT_ID
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcp
-                      key: projectId
+                      name: {{ .Values.backup.secret.name }}
+                      key: {{ .Values.backup.secret.keys.projectId }}
                 - name: GCS_BUCKET
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcp
-                      key: bucket
+                      name: {{ .Values.backup.secret.name }}
+                      key: {{ .Values.backup.secret.keys.bucket }}
                 - name: GCS_BUCKET_DIRECTORY
                   valueFrom:
                     secretKeyRef:
-                      name: semaphore-database-backup-gcp
-                      key: bucketDirectory
+                      name: {{ .Values.backup.secret.name }}
+                      key: {{ .Values.backup.secret.keys.bucketDirectory }}
               volumeMounts:
                 - name: gcp-backup-key-volume
                   mountPath: /tmp/key.json
-                  subPath: keyJson
+                  subPath: {{ .Values.backup.secret.keys.keyJson }}
                 - name: shared-database-dump-directory
                   mountPath: /mnt/shared-database-dump
             {{- end }}
@@ -107,10 +110,7 @@ spec:
             {{- if include "semaphore.backup.toGcsStorage" . }}
             - name: gcp-backup-key-volume
               secret:
-                secretName: semaphore-database-backup-gcp
-                items:
-                  - key: keyJson
-                    path: key.json
+                secretName: {{ .Values.backup.secret.name }}
             {{- end }}
             - name: shared-database-dump-directory
               emptyDir: { }
