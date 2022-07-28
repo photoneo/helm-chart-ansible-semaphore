@@ -1,4 +1,4 @@
-{{- if .Values.ingress.enabled }}
+{{- if .Values.semaphore.ingress.enabled }}
 ---
 
 {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.Version -}}
@@ -19,17 +19,17 @@ metadata:
     {{- if .Values.renderHelmLabels }}
     "helm.sh/chart": "{{ template "semaphore.label" .}}"
     {{- end }}
-{{- if .Values.ingress.labels }}
-{{ toYaml .Values.ingress.labels | indent 4 }}
+{{- if .Values.semaphore.ingress.labels }}
+{{ toYaml .Values.semaphore.ingress.labels | indent 4 }}
 {{- end }}
-{{- if .Values.ingress.annotations }}
+{{- if .Values.semaphore.ingress.annotations }}
   annotations:
-{{ toYaml .Values.ingress.annotations | indent 4 }}
+{{ toYaml .Values.semaphore.ingress.annotations | indent 4 }}
 {{- end }}
   name: {{ template "semaphore.fullname" . }}
 spec:
-{{- if and .Values.ingress.ingressClassName (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
-  ingressClassName: {{ .Values.ingress.ingressClassName | quote }}
+{{- if and .Values.semaphore.ingress.ingressClassName (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion) }}
+  ingressClassName: {{ .Values.semaphore.ingress.ingressClassName | quote }}
 {{- end }}
   rules:
   - http:
@@ -39,20 +39,20 @@ spec:
           service:
             name: {{ include "semaphore.service.name" . }}
             port:
-              number: {{ .Values.service.port }}
-        pathType: "{{ default "Prefix" .Values.ingress.pathType }}"
+              number: {{ .Values.semaphore.service.port }}
+        pathType: "{{ default "Prefix" .Values.semaphore.ingress.pathType }}"
 {{- else }}
           serviceName: {{ template "semaphore.fullname" . }}
-          servicePort: {{ .Values.service.port }}
+          servicePort: {{ .Values.semaphore.service.port }}
 {{- end }}
-{{- if .Values.ingress.path }}
-        path: {{ .Values.ingress.path }}
+{{- if .Values.semaphore.ingress.path }}
+        path: {{ .Values.semaphore.ingress.path }}
 {{- end -}}
-{{- if .Values.ingress.hostName }}
-    host: {{ .Values.ingress.hostName | quote }}
+{{- if .Values.semaphore.ingress.hostName }}
+    host: {{ .Values.semaphore.ingress.hostName | quote }}
 {{- end }}
-{{- if .Values.ingress.tls }}
+{{- if .Values.semaphore.ingress.tls }}
   tls:
-{{ toYaml .Values.ingress.tls | indent 4 }}
+{{ toYaml .Values.semaphore.ingress.tls | indent 4 }}
 {{- end -}}
 {{- end }}
