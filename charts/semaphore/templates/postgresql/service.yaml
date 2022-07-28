@@ -1,0 +1,19 @@
+{{- if .Values.database.createInstance }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: {{ template "semaphore.namespace" . }}
+  name: {{ include "semaphore.database.name" . }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.database.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "semaphore.database.name" . }}
+  ports:
+    - port: {{ default 5432 .Values.database.service.port | int }}
+      targetPort: {{ default 5432 .Values.database.config.port | int }}
+      protocol: TCP
+      name: {{ default "database" .Values.database.config.portName }}
+{{- end }}

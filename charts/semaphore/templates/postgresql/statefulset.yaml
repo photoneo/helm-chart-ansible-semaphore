@@ -1,0 +1,99 @@
+{{- if .Values.database.createInstance }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  namespace: {{ template "semaphore.namespace" . }}
+  name: {{ include "semaphore.database.name" . }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  serviceName: database
+  selector:
+    matchLabels:
+      {{- include "semaphore.database.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "semaphore.database.selectorLabels" . | nindent 8 }}
+    spec:
+      initContainers:
+        - name: database-certificate-creation
+          image: alpine:latest
+          imagePullPolicy: Always
+          command: [ 'sh', '-c' ]
+          args:
+            - apk update;
+              apk add openssl;
+              openssl genrsa -out {{ .Values.database.config.sslCertificate.filename }}.key 4096;
+              openssl req -new -key {{ .Values.database.config.sslCertificate.filename }}.key -out {{ .Values.database.config.sslCertificate.filename }}.csr -subj "/C=/ST=/L=/O=/CN=semaphore.local";
+              openssl x509 -req -days 3650 -in {{ .Values.database.config.sslCertificate.filename }}.csr -signkey {{ .Values.database.config.sslCertificate.filename }}.key -out {{ .Values.database.config.sslCertificate.filename }}.crt;
+              mv postgres.* {{ .Values.database.config.sslCertificate.directory }};
+              chmod -R 600 {{ .Values.database.config.sslCertificate.directory }}/{{ .Values.database.config.sslCertificate.filename }}.key;
+              chmod -R 640 {{ .Values.database.config.sslCertificate.directory }}/{{ .Values.database.config.sslCertificate.filename }}.csr;
+              chmod -R 640 {{ .Values.database.config.sslCertificate.directory }}/{{ .Values.database.config.sslCertificate.filename }}.crt;
+              chown -R "{{ .Values.database.permissions.userId }}":"{{ .Values.database.permissions.groupId }}" {{ .Values.database.config.sslCertificate.directory }}
+          volumeMounts:
+            - mountPath: {{ .Values.database.config.sslCertificate.directory }}
+              name: database-certificates-volume
+      containers:
+        - name: "semaphore-database"
+          image: "{{ .Values.database.image.name }}:{{ .Values.database.image.tag }}"
+          imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
+          args:
+            - '-c'
+            - 'ssl=on'
+            - '-c'
+            - 'ssl_cert_file={{ .Values.database.config.sslCertificate.directory }}/{{ .Values.database.config.sslCertificate.filename }}.crt'
+            - '-c'
+            - 'ssl_key_file={{ .Values.database.config.sslCertificate.directory }}/{{ .Values.database.config.sslCertificate.filename }}.key'
+          ports:
+            - containerPort: {{ default 5432 .Values.database.config.port | int }}
+              name: {{ default "database" .Values.database.config.portName }}
+              protocol: TCP
+          volumeMounts:
+            {{- if .Values.database.persistence.enabled }}
+            - mountPath: /var/lib/postgresql/data
+              name: semaphore-database-volume-storage
+              subPath: postgres
+            {{- end }}
+            - mountPath: {{ .Values.database.config.sslCertificate.directory }}
+              name: database-certificates-volume
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ default "databaseName" .Values.database.secret.keys.databaseName }}"
+                  optional: false
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ default "userName" .Values.database.secret.keys.username }}"
+                  optional: false
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ default "userPassword" .Values.database.secret.keys.password }}"
+                  optional: false
+          livenessProbe:
+            initialDelaySeconds: 10
+            periodSeconds: 3
+            tcpSocket:
+              port: {{ default 5432 .Values.database.config.port | int }}
+          readinessProbe:
+            initialDelaySeconds: 5
+            periodSeconds: 3
+            tcpSocket:
+              port: {{ default 5432 .Values.database.config.port | int }}
+      volumes:
+        - name: database-certificates-volume
+          emptyDir: { }
+        {{- if .Values.database.persistence.enabled }}
+        - name: semaphore-database-volume-storage
+          persistentVolumeClaim:
+            claimName: {{ include "semaphore.database.volume.name" . }}
+        {{- end }}
+{{- end}}
