@@ -1,0 +1,187 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ template "semaphore.namespace" . }}
+  name: {{ include "semaphore.name" . }}
+  labels:
+    {{- include "semaphore.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "semaphore.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "semaphore.selectorLabels" . | nindent 8 }}
+    spec:
+      restartPolicy: Always
+      initContainers:
+        - name: wait-for-database
+          image: alpine:latest
+          imagePullPolicy: IfNotPresent
+          command: ['sh', '-c']
+          args:
+            - while ! nc -w 1 "{{- include "semaphore.database.name" . }}" "{{- .Values.database.service.port }}" ; do echo "waiting for database"; sleep 1; done
+        - name: create-config-file
+          image: alpine:latest
+          imagePullPolicy: Always
+          command: ['sh', '-c']
+          args:
+            - cp /tmp/config_template.json /tmp/config/config.json;
+              sed -i "s/##HOST##/${POSTGRES_HOST}:${POSTGRES_PORT}/" /tmp/config/config.json;
+              sed -i "s/##DATABASE_NAME##/${POSTGRES_DATABASE}/" /tmp/config/config.json;
+              sed -i "s/##USER_NAME##/${POSTGRES_USER}/" /tmp/config/config.json;
+              sed -i "s/##USER_PASSWORD##/${POSTGRES_PASSWORD}/" /tmp/config/config.json;
+          env:
+            - name: POSTGRES_HOST
+              value: "{{- include "semaphore.database.name" . }}"
+            - name: POSTGRES_PORT
+              value: "{{ default 5432 .Values.database.service.port | int}}"
+            - name: POSTGRES_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.databaseName }}"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.username }}"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.password }}"
+          volumeMounts:
+            - mountPath: /tmp/config
+              name: semaphore-config-file
+            - mountPath: /tmp/config_template.json
+              name: semaphore-configuration
+              subPath: config.json
+              readOnly: true
+        {{- if include "semaphore.restore.fromGcsStorage" . }}
+        - name: download-database-dump-file
+          image: "{{ .Values.restore.image.name }}:{{ .Values.restore.image.tag }}"
+          imagePullPolicy: Always
+          command: [ 'bash', '-c' ]
+          args:
+            - set -xuve;
+              filename="/{{ .Values.restore.baseFilename }}.tar.gz";
+              file="/tmp/dump${filename}";
+              gcloud auth activate-service-account "${GCS_SERVICE_ACCOUNT_EMAIL}" --key-file=/tmp/key.json --project="${GCS_PROJECT_ID}";
+              gsutil cp "gs://${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}" "${file}"
+          env:
+            - name: GCS_SERVICE_ACCOUNT_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.restore.secret.name }}
+                  key: {{ .Values.restore.secret.keys.serviceAccountEmail }}
+            - name: GCS_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.restore.secret.name }}
+                  key: {{ .Values.restore.secret.keys.projectId }}
+            - name: GCS_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.restore.secret.name }}
+                  key: {{ .Values.restore.secret.keys.bucket }}
+            - name: GCS_BUCKET_DIRECTORY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.restore.secret.name }}
+                  key: {{ .Values.restore.secret.keys.bucketDirectory }}
+          volumeMounts:
+            - mountPath: /tmp/dump
+              name: shared-database-restore-directory
+            - name: gcp-restore-key-volume
+              mountPath: /tmp/key.json
+              subPath: {{ .Values.restore.secret.keys.keyJson }}
+        - name: restore-database-from-dump-file
+          image: "{{ .Values.database.image.name }}:{{ .Values.database.image.tag }}"
+          imagePullPolicy: Always
+          command: [ 'sh', '-c' ]
+          args:
+            - set -exuv;
+              echo "${POSTGRES_HOST}:${POSTGRES_PORT}:${POSTGRES_DATABASE}:${POSTGRES_USER}:${POSTGRES_PASSWORD}" > "$HOME/.pgpass";
+              chmod 600 "$HOME/.pgpass";
+              cd /tmp/dump;
+              tar zxvf "{{ .Values.restore.baseFilename }}.tar.gz";
+              pg_restore -U "${POSTGRES_USER} "{{- include "semaphore.restore.pg_restore.extraOptions" . }}" -d "${POSTGRES_DATABASE} < "{{ .Values.restore.baseFilename }}.sql"
+          env:
+            - name: POSTGRES_HOST
+              value: "{{- include "semaphore.database.name" . }}"
+            - name: POSTGRES_PORT
+              value: "{{ default 5432 .Values.database.service.port | int}}"
+            - name: POSTGRES_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.databaseName }}"
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.username }}"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ .Values.database.secret.name }}"
+                  key: "{{ .Values.database.secret.keys.password }}"
+          volumeMounts:
+            - mountPath: /tmp/dump
+              name: shared-database-restore-directory
+        {{- end }}
+      containers:
+        - name: "semaphore"
+          image: "{{ .Values.semaphore.image.name }}:{{ .Values.semaphore.image.tag }}"
+          imagePullPolicy: "{{ .Values.semaphore.imagePullPolicy }}"
+          command: ['sh', '-c']
+          args:
+            - semaphore service
+          ports:
+            - containerPort: {{ default 3000 .Values.semaphore.containerPort | int}}
+          volumeMounts:
+            - mountPath: /home/semaphore/config.json
+              name: semaphore-config-file
+              subPath: config.json
+          readinessProbe:
+            httpGet:
+              port: {{ default 3000 .Values.semaphore.containerPort | int }}
+              path: /ping
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          livenessProbe:
+            httpGet:
+              port: {{ default 3000 .Values.semaphore.containerPort | int }}
+              path: /
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 3
+      volumes:
+        - name: semaphore-configuration
+          secret:
+            secretName: {{ include "semaphore.config.configMapName" . }}
+        - name: semaphore-config-file
+          emptyDir: { }
+        {{- if .Values.semaphore.existingSecretSSHDir }}
+        - name: ssh-keys
+          secret:
+            secretName: {{ .Values.semaphore.existingSecretSSHDir }}
+        {{- end }}
+        {{- if .Values.database.persistence.enabled }}
+        - name: semaphore-database-volume-storage
+          persistentVolumeClaim:
+            claimName: {{ include "semaphore.database.volume.name" . }}
+        {{- end }}
+        {{- if .Values.restore.enabled }}
+        - name: shared-database-restore-directory
+          emptyDir: { }
+        {{- end }}
+        {{- if include "semaphore.restore.fromGcsStorage" . }}
+        - name: gcp-restore-key-volume
+          secret:
+            secretName: {{ .Values.restore.secret.name }}
+        {{- end }}

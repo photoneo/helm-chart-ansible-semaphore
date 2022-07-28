@@ -5,7 +5,7 @@
 2. Get the application URL by running these commands:
 {{- if .Values.ingress.enabled }}
   http{{- if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.hostName }}{{ .Values.ingress.path }}
-{{- else if contains "ClusterIP" .Values.service.type }}
+{{- else if contains "ClusterIP" .Values.semaphore.service.type }}
   export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "semaphore.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
   export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
   echo "Visit http://127.0.0.1:8080 to use your application"

@@ -5,6 +5,9 @@ Expand the name of the chart.
 {{- default .Chart.Name .Values.chartNameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{- define "semaphore.database.name" -}}
+{{ printf "%s-%s" ( include "semaphore.name" . ) "database" | trunc 63 | trimSuffix "-" }}
+{{- end }}
 
 {{/*
 Create a default fully qualified app name.
@@ -66,13 +69,14 @@ app.kubernetes.io/name: {{ include "semaphore.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
-
 {{/*
-Database name value
+Selector labels
 */}}
-{{- define "semaphore.database.name" -}}
-{{- default "semaphore_database" .Values.database.config.databaseName }}
+{{- define "semaphore.database.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "semaphore.database.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
+
 
 
 {{/*
@@ -87,24 +91,7 @@ Database user name value
 Database user password value
 */}}
 {{- define "semaphore.database.userPassword" -}}
-{{- $generatedPassword := randAlphaNum 64 }}
-{{- default $generatedPassword .Values.database.config.userPassword }}
-{{- end }}
-
-
-{{/*
-Database host value
-*/}}
-{{- define "semaphore.database.host" -}}
-{{- default "localhost" .Values.database.config.host }}
-{{- end }}
-
-
-{{/*
-Database port value
-*/}}
-{{- define "semaphore.database.port" -}}
-{{- default 5432 .Values.database.config.port | int }}
+{{- default (randAlphaNum 64) .Values.database.config.userPassword }}
 {{- end }}
 
 
@@ -112,8 +99,8 @@ Database port value
 Database volume name
 */}}
 {{- define "semaphore.database.volume.name" -}}
-{{- if .Values.database.persistentVolumeClaimNameOverride }}
-{{ .Values.database.persistentVolumeClaimNameOverride }}
+{{- if .Values.database.persistence.volumeClaimNameOverride }}
+{{ .Values.database.persistence.volumeClaimNameOverride }}
 {{- else }}
 {{- include "semaphore.name" . }}-database-volume
 {{- end }}
@@ -121,17 +108,9 @@ Database volume name
 
 
 {{/*
-Database volume size
-*/}}
-{{- define "semaphore.database.volume.size" -}}
-{{- default "5Gi" .Values.database.volumeSize }}
-{{- end }}
-
-
-{{/*
 Semaphore configuration secret resource name
 */}}
-{{- define "semaphore.config.secretName" -}}
+{{- define "semaphore.config.configMapName" -}}
 {{- include "semaphore.name" . }}-configuration
 {{- end }}
 
@@ -188,8 +167,8 @@ true
 {{/*
 Semaphore database backup postgresql extra options
 */}}
-{{- define "semaphore.backup.postgres.extraOptions" -}}
-{{- default "--blobs" .Values.backup.postgresql.extraOptions }}
+{{- define "semaphore.backup.pg_dump.extraOptions" -}}
+{{- default "--blobs" .Values.backup.pg_dump.extraOptions }}
 {{- end }}
 
 
@@ -220,13 +199,16 @@ Semaphore service name
 {{/*
 Semaphore database restore postgresql extra options
 */}}
-{{- define "semaphore.restore.postgres.extraOptions" -}}
-{{- default "-Ft -C" .Values.backup.postgresql.extraOptions }}
+{{- define "semaphore.restore.pg_restore.extraOptions" -}}
+{{- default "-Ft -C" .Values.restore.pg_restore.extraOptions }}
 {{- end }}
 
 {{- define "semaphore.restore.fromGcsStorage" -}}
 {{- if .Values.restore }}
 {{- if .Values.restore.enabled }}
+{{- if .Values.restore.secret.useExisting }}
+true
+{{- else}}
 {{- if .Values.restore.gcp }}
 {{- if .Values.restore.gcp.projectId }}
 {{- if .Values.restore.gcp.keyJson }}
@@ -240,6 +222,16 @@ true
 {{- end }}
 {{- end }}
 {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+
+{{- define "semaphore.database.secretEnabled" }}
+{{- if .Values.database.createInstance}}
+{{- if not .Values.database.secret.useExisting }}
+true
 {{- end }}
 {{- end }}
 {{- end }}

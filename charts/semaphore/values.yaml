@@ -8,26 +8,23 @@ chartNameOverride: ""
 semaphore:
   image:
     name: "ansiblesemaphore/semaphore"
-    tag: "v2.8.22"
+    tag: "v2.8.53"
   imagePullPolicy: "IfNotPresent"
   containerPort: 3000
-
-# created as: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys
-existingSecretSSHDir: ""
-
-config:
-  web_host: ""
-  email_alert: false
-  email_host: ""
-  email_port: ""
-  email_username: ""
-  email_userpassword: ""
-  email_sender: ""
-
-service:
-  enabled: true
-  type: ClusterIP
-  port: 3000
+  # created as: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys
+  existingSecretSSHDir: ""
+  config:
+    web_host: ""
+    email_alert: false
+    email_host: ""
+    email_port: ""
+    email_username: ""
+    email_userpassword: ""
+    email_sender: ""
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 3000
 
 ingress:
   enabled: true
@@ -42,24 +39,42 @@ ingress:
     #     - semaphore.example.com
 
 database:
-  enabled: true
+  createInstance: true
   image:
     name: "postgres"
     tag: "14-alpine"
   imagePullPolicy: "IfNotPresent"
-  volumeSize: 10Gi
-  containerPort: 5432
-  persistenceEnabled: true
-  persistentVolumeClaimNameOverride: ""
+  persistence:
+    enabled: true
+    volumeClaimNameOverride: ""
+    volumeSize: 10Gi
+    accessModes:
+      - ReadWriteOnce
   permissions:
     userId: 70
     groupId: 70
   config:
     host: "localhost"
     port: 5432
+    portName: "database"
     databaseName: "semaphore"
     userName: ""
     userPassword: ""
+    sslCertificate:
+      directory: "/var/lib/postgresql/database-certificates"
+      filename: "postgres"
+  service:
+    type: ClusterIP
+    port: 5432
+  secret:
+    useExisting: false
+    name: "semaphore-database-secrets"
+    keys:
+      username: "userName"
+      password: "userPassword"
+      databaseName: "databaseName"
+      host: "host"
+      port: "port"
 
 restore:
   enabled: false
@@ -68,12 +83,37 @@ restore:
     tag: "slim"
   # file name without extension located on gcs_storage/bucket/directory
   baseFilename: "database-dump"
+  secret:
+    useExisting: false
+    name: "semaphore-database-restore-gcp"
+    keys:
+      projectId: "projectId"
+      keyJson: "key.json"
+      serviceAccountEmail: "serviceAccountEmail"
+      bucket: "bucket"
+      bucketDirectory: "bucketDirectory"
   gcp:
     projectId: ""
-    keyJson: "{}"
     serviceAccountEmail: ""
     bucket: ""
     bucketDirectory: ""
+    keyJson: "{}"
+    # example how to set value
+    #keyJson: |
+    #  {
+    #    "type": "service_account",
+    #    "project_id": "project-identifier-xxxxxx",
+    #    "private_key_id": "{private-key-id}",
+    #    "private_key": "-----BEGIN PRIVATE KEY-----\n{first line}\n{second line}\n...\n{last line}\n-----END PRIVATE KEY-----\n",
+    #    "client_email": "some-email...@...gserviceaccount.com",
+    #    "client_id": "{client-id}",
+    #    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    #    "token_uri": "https://oauth2.googleapis.com/token",
+    #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
+    #  }
+  pg_restore:
+    extraOptions: ""
 
 backup:
   enabled: false
@@ -82,11 +122,34 @@ backup:
   image:
     name: "google/cloud-sdk"
     tag: "slim"
+  secret:
+    useExisting: false
+    name: "semaphore-database-backup-gcp"
+    keys:
+      projectId: "projectId"
+      keyJson: "key.json"
+      serviceAccountEmail: "serviceAccountEmail"
+      bucket: "bucket"
+      bucketDirectory: "bucketDirectory"
   gcp:
     projectId: ""
-    keyJson: "{}"
     serviceAccountEmail: ""
     bucket: ""
     bucketDirectory: ""
-  postgresql:
+    keyJson: "{}"
+    # example how to set value
+    #keyJson: |
+    #  {
+    #    "type": "service_account",
+    #    "project_id": "project-identifier-xxxxxx",
+    #    "private_key_id": "{private-key-id}",
+    #    "private_key": "-----BEGIN PRIVATE KEY-----\n{first line}\n{second line}\n...\n{last line}\n-----END PRIVATE KEY-----\n",
+    #    "client_email": "some-email...@...gserviceaccount.com",
+    #    "client_id": "{client-id}",
+    #    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    #    "token_uri": "https://oauth2.googleapis.com/token",
+    #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
+    #  }
+  pg_dump:
     extraOptions: ""
