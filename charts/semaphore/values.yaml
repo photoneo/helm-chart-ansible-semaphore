@@ -25,18 +25,17 @@ semaphore:
     enabled: true
     type: ClusterIP
     port: 3000
-
-ingress:
-  enabled: true
-  labels: {}
-  annotations: {}
-  ingressClassName: nginx
-  path: "/"
-  hostName: "semaphore.example.com"
-  tls:
-    # - secretName: semaphore.example.com
-    #   hosts:
-    #     - semaphore.example.com
+  ingress:
+    enabled: true
+    labels: {}
+    annotations: {}
+    ingressClassName: nginx
+    path: "/"
+    hostName: "semaphore.example.com"
+    tls:
+      # - secretName: semaphore.example.com
+      #   hosts:
+      #     - semaphore.example.com
 
 database:
   createInstance: true
@@ -76,45 +75,6 @@ database:
       host: "host"
       port: "port"
 
-restore:
-  enabled: false
-  image:
-    name: "google/cloud-sdk"
-    tag: "slim"
-  # file name without extension located on gcs_storage/bucket/directory
-  baseFilename: "database-dump"
-  secret:
-    useExisting: false
-    name: "semaphore-database-restore-gcp"
-    keys:
-      projectId: "projectId"
-      keyJson: "key.json"
-      serviceAccountEmail: "serviceAccountEmail"
-      bucket: "bucket"
-      bucketDirectory: "bucketDirectory"
-  gcp:
-    projectId: ""
-    serviceAccountEmail: ""
-    bucket: ""
-    bucketDirectory: ""
-    keyJson: "{}"
-    # example how to set value
-    #keyJson: |
-    #  {
-    #    "type": "service_account",
-    #    "project_id": "project-identifier-xxxxxx",
-    #    "private_key_id": "{private-key-id}",
-    #    "private_key": "-----BEGIN PRIVATE KEY-----\n{first line}\n{second line}\n...\n{last line}\n-----END PRIVATE KEY-----\n",
-    #    "client_email": "some-email...@...gserviceaccount.com",
-    #    "client_id": "{client-id}",
-    #    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    #    "token_uri": "https://oauth2.googleapis.com/token",
-    #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
-    #  }
-  pg_restore:
-    extraOptions: ""
-
 backup:
   enabled: false
   schedule: ""
@@ -151,5 +111,44 @@ backup:
     #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
     #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
     #  }
-  pg_dump:
+  pgDump:
+    extraOptions: ""
+
+restore:
+  enabled: false
+  image:
+    name: "google/cloud-sdk"
+    tag: "slim"
+  # file name without extension located on gcs_storage/bucket/directory
+  baseFilename: "database-dump"
+  secret:
+    useExisting: false
+    name: "semaphore-database-restore-gcp"
+    keys:
+      projectId: "projectId"
+      keyJson: "key.json"
+      serviceAccountEmail: "serviceAccountEmail"
+      bucket: "bucket"
+      bucketDirectory: "bucketDirectory"
+  gcp:
+    projectId: ""
+    serviceAccountEmail: ""
+    bucket: ""
+    bucketDirectory: ""
+    keyJson: "{}"
+    # example how to set value
+    #keyJson: |
+    #  {
+    #    "type": "service_account",
+    #    "project_id": "project-identifier-xxxxxx",
+    #    "private_key_id": "{private-key-id}",
+    #    "private_key": "-----BEGIN PRIVATE KEY-----\n{first line}\n{second line}\n...\n{last line}\n-----END PRIVATE KEY-----\n",
+    #    "client_email": "some-email...@...gserviceaccount.com",
+    #    "client_id": "{client-id}",
+    #    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    #    "token_uri": "https://oauth2.googleapis.com/token",
+    #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
+    #  }
+  pgRestore:
     extraOptions: ""
