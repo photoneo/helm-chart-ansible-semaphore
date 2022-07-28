@@ -1,5 +1,5 @@
 {{- if .Values.backup.enabled }}
-{{- if or ( include "semaphore.backup.toGcsStorage" . ) ( include "semaphore.backup.toS3Storage" . ) }}
+{{- if include "semaphore.backup.toGcsStorage" . }}
 ---
 apiVersion: batch/v1
 kind: CronJob
