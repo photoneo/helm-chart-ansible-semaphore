@@ -50,7 +50,7 @@ The following table lists the configurable parameters of the **Ansible Semaphore
 | `database.persistence.accessModes`             | Persistent volume claim access modes                            | ReadWriteOnce                               |
 | `database.permissions.userId`                  | Id of database user in pod                                      | 70                                          |
 | `database.permissions.groupId`                 | Id of database group in pod                                     | 70                                          |
-| `database.config.host`                         | Database internal host name                                     | "localhost"                                 |
+| `database.config.host`                         | Database internal host name                                     | "semaphore-database"                        |
 | `database.config.port`                         | Database internal port                                          | 5432                                        |
 | `database.config.databaseName`                 | Database name                                                   | "semaphore"                                 |
 | `database.config.userName`                     | Database user name                                              | ""                                          |
