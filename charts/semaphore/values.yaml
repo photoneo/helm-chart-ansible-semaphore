@@ -53,7 +53,7 @@ database:
     userId: 70
     groupId: 70
   config:
-    host: "localhost"
+    host: "semaphore-database"
     port: 5432
     portName: "database"
     databaseName: "semaphore"
