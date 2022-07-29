@@ -70,7 +70,7 @@ spec:
             {{- if include "semaphore.backup.toGcsStorage" . }}
             - name: postgresql-database-dump-to-google-cloud-storage
               imagePullPolicy: IfNotPresent
-              image: "{{ .Values.backup.image.name }}:{{ .Values.backup.image.tag }}}"
+              image: "{{ .Values.backup.image.name }}:{{ .Values.backup.image.tag }}"
               command: [ 'bash', '-c' ]
               args:
                 - set -exuv;
