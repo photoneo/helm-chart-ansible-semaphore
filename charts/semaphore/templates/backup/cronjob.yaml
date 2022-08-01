@@ -27,8 +27,8 @@ spec:
               imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
               command: [ 'sh', '-c']
               args:
-                - set -exuv;
-                  echo "${POSTGRES_HOST}:${POSTGRES_PORT}:${POSTGRES_DATABASE}:${POSTGRES_USER}:${POSTGRES_PASSWORD}" > "$HOME/.pgpass";
+                - echo "${POSTGRES_HOST}:${POSTGRES_PORT}:${POSTGRES_DATABASE}:${POSTGRES_USER}:${POSTGRES_PASSWORD}" > "$HOME/.pgpass";
+                  set -exuv;
                   chmod 600 "$HOME/.pgpass";
                   sourceFile="/mnt/shared-database-dump/database-dump.sql";
                   compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
