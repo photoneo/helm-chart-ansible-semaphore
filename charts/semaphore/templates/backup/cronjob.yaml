@@ -67,7 +67,6 @@ spec:
                 - name: shared-database-dump-directory
                   mountPath: /mnt/shared-database-dump
           containers:
-            {{- if include "semaphore.backup.toGcsStorage" . }}
             - name: postgresql-database-dump-to-google-cloud-storage
               imagePullPolicy: IfNotPresent
               image: "{{ .Values.backup.image.name }}:{{ .Values.backup.image.tag }}"
@@ -106,15 +105,11 @@ spec:
                   subPath: {{ .Values.backup.secret.keys.keyJson }}
                 - name: shared-database-dump-directory
                   mountPath: /mnt/shared-database-dump
-            {{- end }}
           volumes:
-            {{- if include "semaphore.backup.toGcsStorage" . }}
             - name: gcp-backup-key-volume
               secret:
                 secretName: {{ .Values.backup.secret.name }}
-            {{- end }}
             - name: shared-database-dump-directory
               emptyDir: { }
-
 {{- end }}
 {{- end }}
