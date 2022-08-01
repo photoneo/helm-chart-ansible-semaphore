@@ -168,7 +168,7 @@ true
 Semaphore database backup postgresql extra options
 */}}
 {{- define "semaphore.backup.pg_dump.extraOptions" -}}
-{{- default "--blobs" .Values.backup.pgDump.extraOptions }}
+{{- default "--blobs --schema=public" .Values.backup.pgDump.extraOptions }}
 {{- end }}
 
 
@@ -200,7 +200,7 @@ Semaphore service name
 Semaphore database restore postgresql extra options
 */}}
 {{- define "semaphore.restore.pg_restore.extraOptions" -}}
-{{- default "-Ft -C" .Values.restore.pgRestore.extraOptions }}
+{{- default "" .Values.restore.pgRestore.extraOptions }}
 {{- end }}
 
 {{- define "semaphore.restore.fromGcsStorage" -}}
