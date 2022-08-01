@@ -74,10 +74,12 @@ spec:
           command: [ 'bash', '-c' ]
           args:
             - set -xuve;
-              filename="/{{ .Values.restore.baseFilename }}.tar.gz";
-              file="/tmp/dump${filename}";
+              filename="/{{ .Values.restore.archiveFileName }}.tar.gz";
+              filename="$(echo "${filename}" | sed -E 's/(.tar.gz)+/.tar.gz/')";
+              file="$(echo "/tmp/dump${filename}" |  sed -E 's,\/+,/,'g)";
               gcloud auth activate-service-account "${GCS_SERVICE_ACCOUNT_EMAIL}" --key-file=/tmp/key.json --project="${GCS_PROJECT_ID}";
-              gsutil cp "gs://${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}" "${file}"
+              remoteFilePath="$(echo "${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}" | sed -E 's,\/+,/,'g)";
+              gsutil cp "gs://${remoteFilePath}" "${file}"
           env:
             - name: GCS_SERVICE_ACCOUNT_EMAIL
               valueFrom:
