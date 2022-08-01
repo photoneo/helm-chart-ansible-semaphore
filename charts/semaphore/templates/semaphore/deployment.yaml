@@ -22,7 +22,7 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ['sh', '-c']
           args:
-            - while ! nc -w 1 "{{- include "semaphore.database.name" . }}" "{{- .Values.database.service.port }}" ; do echo "waiting for database"; sleep 1; done
+            - while ! nc -w 1 "{{- include "semaphore.database.name" . }}" "{{- .Values.database.service.port }}" ; do echo "waiting for database"; sleep 1; done; echo "Database responded"
         - name: create-config-file
           image: alpine:latest
           imagePullPolicy: Always
@@ -33,6 +33,7 @@ spec:
               sed -i "s/##DATABASE_NAME##/${POSTGRES_DATABASE}/" /tmp/config/config.json;
               sed -i "s/##USER_NAME##/${POSTGRES_USER}/" /tmp/config/config.json;
               sed -i "s/##USER_PASSWORD##/${POSTGRES_PASSWORD}/" /tmp/config/config.json;
+              echo "Config file created"
           env:
             - name: POSTGRES_HOST
               valueFrom:
@@ -66,7 +67,7 @@ spec:
               name: semaphore-configuration
               subPath: config.json
               readOnly: true
-        {{- if include "semaphore.restore.fromGcsStorage" . }}
+        {{- if and ( include "semaphore.restore.fromGcsStorage" . ) .Release.IsInstall }}
         - name: download-database-dump-file
           image: "{{ .Values.restore.image.name }}:{{ .Values.restore.image.tag }}"
           imagePullPolicy: Always
