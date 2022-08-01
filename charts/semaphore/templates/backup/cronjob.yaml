@@ -77,7 +77,8 @@ spec:
                   compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
                   filename="/{{- include "semaphore.backup.filenamePrefix" . }}$(date +"{{- include "semaphore.backup.dateFormat" . }}").tar.gz";
                   gcloud auth activate-service-account "${GCS_SERVICE_ACCOUNT_EMAIL}" --key-file=/tmp/key.json --project="${GCS_PROJECT_ID}";
-                  gsutil cp "${compressedSourceFile}" "gs://${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}"
+                  remoteFilePath="$(echo "${GCS_BUCKET}${GCS_BUCKET_DIRECTORY}${filename}" | sed -E 's,\/+,/,'g)";
+                  gsutil cp "${compressedSourceFile}" "gs://${remoteFilePath}"
               env:
                 - name: GCS_SERVICE_ACCOUNT_EMAIL
                   valueFrom:
