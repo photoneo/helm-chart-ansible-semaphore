@@ -119,8 +119,11 @@ restore:
   image:
     name: "google/cloud-sdk"
     tag: "slim"
-  # file name without extension located on gcs_storage/bucket/directory
-  baseFilename: "database-dump"
+  # file name without .tar.gz extension located on gcs_storage/bucket/directory
+  archiveFileName: "semaphore-YYYY-MM-DD_HH:MM"
+  # file name extracted from archive file
+  pgDumpFileName: "database-dump.sql"
+  backupBeforeRestore: true
   secret:
     useExisting: false
     name: "semaphore-database-restore-gcp"
@@ -150,5 +153,5 @@ restore:
     #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
     #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
     #  }
-  pgRestore:
+  psql:
     extraOptions: ""

@@ -199,8 +199,8 @@ Semaphore service name
 {{/*
 Semaphore database restore postgresql extra options
 */}}
-{{- define "semaphore.restore.pg_restore.extraOptions" -}}
-{{- default "" .Values.restore.pgRestore.extraOptions }}
+{{- define "semaphore.restore.psql.extraOptions" -}}
+{{- default "" .Values.restore.psql.extraOptions }}
 {{- end }}
 
 {{- define "semaphore.restore.fromGcsStorage" -}}
