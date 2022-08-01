@@ -87,6 +87,7 @@ The following table lists the configurable parameters of the **Ansible Semaphore
 | `restore.enabled`                              | Enable database restoration                                                 | false                                       |
 | `restore.archiveFileName`                      | Archive filename without extension from gcp storage                         | "semaphore-YYYY-MM-DD_HH:MM"                |
 | `restore.pgDumpFileName`                       | Database dump file from archive filename without extension from gcp storage | "database-dump.sql"                         |
+| `restore.backupBeforeRestore`                  | Backup database before restoring - backup values must be configured         | true                                        |
 | `restore.image.name`                           | Image name used to download db backup from gcs                              | "google/cloud-sdk"                          |
 | `restore.image.tag`                            | Image tag used to download db backup from gcs                               | "slim"                                      |
 | `restore.secret.useExisting`                   | Toggle to create new or use existing gcp restore secret                     | false                                       |
