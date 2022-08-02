@@ -80,22 +80,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 
 {{/*
-Database user name value
-*/}}
-{{- define "semaphore.database.userName" -}}
-{{- default "semaphore_user" .Values.database.config.userName }}
-{{- end }}
-
-
-{{/*
-Database user password value
-*/}}
-{{- define "semaphore.database.userPassword" -}}
-{{- default (randAlphaNum 64) .Values.database.config.userPassword }}
-{{- end }}
-
-
-{{/*
 Database volume name
 */}}
 {{- define "semaphore.database.volume.name" -}}
