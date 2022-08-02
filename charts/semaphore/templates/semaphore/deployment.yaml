@@ -68,7 +68,7 @@ spec:
               subPath: config.json
               readOnly: true
         {{- if and ( include "semaphore.restore.fromGcsStorage" . ) .Release.IsInstall }}
-        {{- if and ( default "true" .Values.restore.backupBeforeRestore ) ( include "semaphore.backup.toGcsStorage" )}}
+        {{- if and ( default "true" .Values.restore.backupBeforeRestore ) ( include "semaphore.backup.toGcsStorage" . )}}
         - name: create-database-dump-file
           image: "{{ .Values.database.image.name }}:{{ .Values.database.image.tag }}"
           imagePullPolicy: "{{ .Values.database.imagePullPolicy }}"
@@ -285,7 +285,7 @@ spec:
         - name: gcp-restore-key-volume
           secret:
             secretName: {{ .Values.restore.secret.name }}
-        {{- if and ( default "true" .Values.restore.backupBeforeRestore ) ( include "semaphore.backup.toGcsStorage" )}}
+        {{- if and ( default "true" .Values.restore.backupBeforeRestore ) ( include "semaphore.backup.toGcsStorage" . )}}
         - name: shared-database-dump-directory
           emptyDir: { }
         - name: gcp-backup-key-volume
