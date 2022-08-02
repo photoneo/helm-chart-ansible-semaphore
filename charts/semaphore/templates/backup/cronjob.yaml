@@ -32,7 +32,7 @@ spec:
                   chmod 600 "$HOME/.pgpass";
                   sourceFile="/mnt/shared-database-dump/database-dump.sql";
                   compressedSourceFile="/mnt/shared-database-dump/database-dump.tar.gz";
-                  pg_dump --username "${POSTGRES_USER}" --host "${POSTGRES_HOST}" {{ include "semaphore.backup.pg_dump.extraOptions" . }} "${POSTGRES_DATABASE}" > "${sourceFile}";
+                  pg_dump --username "${POSTGRES_USER}" --host "${POSTGRES_HOST}" {{ include "semaphore.backup.pgDump.extraOptions" . }} "${POSTGRES_DATABASE}" > "${sourceFile}";
                   tar cvzf "${compressedSourceFile}" --directory "$(dirname "${sourceFile}")" .;
                   ls -lah "${compressedSourceFile}"
               env:

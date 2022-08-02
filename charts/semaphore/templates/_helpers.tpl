@@ -151,7 +151,7 @@ true
 {{/*
 Semaphore database backup postgresql extra options
 */}}
-{{- define "semaphore.backup.pg_dump.extraOptions" -}}
+{{- define "semaphore.backup.pgDump.extraOptions" -}}
 {{- default "--blobs --schema=public" .Values.backup.pgDump.extraOptions }}
 {{- end }}
 
