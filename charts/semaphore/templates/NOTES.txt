@@ -1,15 +1,15 @@
 1. Create first admin user using command:
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "semaphore.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  kubectl exec $POD_NAME --container semaphore --namespace {{ .Release.Namespace }} -- semaphore user add --admin --login admin --name="admin" --email="admin@example.com" --password="mypassword123"
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "semaphore.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}");
+  kubectl exec $POD_NAME --container semaphore --namespace {{ .Release.Namespace }} -- semaphore user add --admin --login admin --name="admin" --email="admin@example.com" --password="mypassword123";
 
-2. Get the application URL by running these commands:
+2. Expose application by running these commands:
 {{- if .Values.semaphore.ingress.enabled }}
   http{{- if .Values.semaphore.ingress.tls }}s{{ end }}://{{ .Values.semaphore.ingress.hostName }}{{ .Values.semaphore.ingress.path }}
 {{- else if contains "ClusterIP" .Values.semaphore.service.type }}
-  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "semaphore.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
-  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
-  echo "Visit http://127.0.0.1:8080 to use your application"
-  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "semaphore.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}");
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}");
+  echo "Visit http://127.0.0.1:8080 to use your application";
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT;
 {{- else }}
   Could not determine access to application
 {{- end }}
