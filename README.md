@@ -48,12 +48,12 @@ The following table lists the configurable parameters of the **Ansible Semaphore
 | `database.persistence.volumeClaimNameOverride` | PVC override                                                                | ""                                          |
 | `database.persistence.volumeSize`              | Persistent volume claim size                                                | 10Gi                                        |
 | `database.persistence.accessModes`             | Persistent volume claim access modes                                        | ReadWriteOnce                               |
-| `database.permissions.userId`                  | Id of database user in pod                                                  | 70                                          |
-| `database.permissions.groupId`                 | Id of database group in pod                                                 | 70                                          |
+| `database.permissions.userId`                  | Id of database user in pod (in case of changing alpine/debian based image)  | 70                                          |
+| `database.permissions.groupId`                 | Id of database group in pod (in case of changing alpine/debian based image) | 70                                          |
 | `database.config.host`                         | Database internal host name                                                 | "semaphore-database"                        |
 | `database.config.port`                         | Database internal port                                                      | 5432                                        |
 | `database.config.databaseName`                 | Database name                                                               | "semaphore"                                 |
-| `database.config.userName`                     | Database user name                                                          | ""                                          |
+| `database.config.userName`                     | Database user name                                                          | "semaphore_user"                            |
 | `database.config.userPassword`                 | Database user password                                                      | ""                                          |
 | `database.sslCertificate.directory`            | Absolute path where ssl certificate files should be placed                  | "/var/lib/postgresql/database-certificates" |
 | `database.sslCertificate.filename`             | Base name for certificate files                                             | "postgres"                                  |

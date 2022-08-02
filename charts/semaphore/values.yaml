@@ -57,7 +57,7 @@ database:
     port: 5432
     portName: "database"
     databaseName: "semaphore"
-    userName: ""
+    userName: "semaphore_user"
     userPassword: ""
     sslCertificate:
       directory: "/var/lib/postgresql/database-certificates"
