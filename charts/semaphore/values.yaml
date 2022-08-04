@@ -6,63 +6,152 @@ namespaceOverride: ""
 chartNameOverride: ""
 
 semaphore:
-  image: "ansiblesemaphore/semaphore:v2.8.53"
+  image:
+    name: "ansiblesemaphore/semaphore"
+    tag: "v2.8.53"
   imagePullPolicy: "IfNotPresent"
   containerPort: 3000
-
-# created as: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys
-existingSecretSSHDir: ""
-
-config:
-  web_host: ""
-  email_alert: false
-  email_host: ""
-  email_port: ""
-  email_username: ""
-  email_userpassword: ""
-  email_sender: ""
-
-service:
-  enabled: true
-  type: ClusterIP
-  port: 3000
-
-ingress:
-  enabled: true
-  labels: {}
-  annotations: {}
-  ingressClassName: nginx
-  path: "/"
-  hostName: "semaphore.example.com"
-  tls:
-    # - secretName: semaphore.example.com
-    #   hosts:
-    #     - semaphore.example.com
+  # created as: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys
+  existingSecretSSHDir: ""
+  config:
+    web_host: ""
+    email_alert: false
+    email_host: ""
+    email_port: ""
+    email_username: ""
+    email_userpassword: ""
+    email_sender: ""
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: true
+    labels: {}
+    annotations: {}
+    ingressClassName: nginx
+    path: "/"
+    hostName: "semaphore.example.com"
+    tls:
+      # - secretName: semaphore.example.com
+      #   hosts:
+      #     - semaphore.example.com
 
 database:
-  enabled: true
-  image: "postgres:14-alpine"
+  createInstance: true
+  image:
+    name: "postgres"
+    tag: "14-alpine"
   imagePullPolicy: "IfNotPresent"
-  volumeSize: 10Gi
-  containerPort: 5432
-  persistenceEnabled: true
-  persistentVolumeClaimNameOverride: ""
+  persistence:
+    enabled: true
+    volumeClaimNameOverride: ""
+    volumeSize: 10Gi
+    accessModes:
+      - ReadWriteOnce
+  permissions:
+    userId: 70
+    groupId: 70
   config:
-    host: "localhost"
+    host: "semaphore-database"
     port: 5432
+    portName: "database"
     databaseName: "semaphore"
-    userName: ""
+    userName: "semaphore_user"
     userPassword: ""
+    sslCertificate:
+      directory: "/var/lib/postgresql/database-certificates"
+      filename: "postgres"
+  service:
+    type: ClusterIP
+    port: 5432
+  secret:
+    useExisting: false
+    name: "semaphore-database-secrets"
+    keys:
+      username: "userName"
+      password: "userPassword"
+      databaseName: "databaseName"
+      host: "host"
+      port: "port"
 
 backup:
   enabled: false
   schedule: ""
   activeDeadlineSeconds: ""
+  image:
+    name: "google/cloud-sdk"
+    tag: "slim"
+  secret:
+    useExisting: false
+    name: "semaphore-database-backup-gcp"
+    keys:
+      projectId: "projectId"
+      keyJson: "key.json"
+      serviceAccountEmail: "serviceAccountEmail"
+      bucket: "bucket"
+      bucketDirectory: "bucketDirectory"
   gcp:
     projectId: ""
-    keyJson: "{}"
     serviceAccountEmail: ""
     bucket: ""
     bucketDirectory: ""
-  postgresql:
+    keyJson: "{}"
+    # example how to set value
+    #keyJson: |
+    #  {
+    #    "type": "service_account",
+    #    "project_id": "project-identifier-xxxxxx",
+    #    "private_key_id": "{private-key-id}",
+    #    "private_key": "-----BEGIN PRIVATE KEY-----\n{first line}\n{second line}\n...\n{last line}\n-----END PRIVATE KEY-----\n",
+    #    "client_email": "some-email...@...gserviceaccount.com",
+    #    "client_id": "{client-id}",
+    #    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    #    "token_uri": "https://oauth2.googleapis.com/token",
+    #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
+    #  }
+  pgDump:
+    extraOptions: ""
+
+restore:
+  enabled: false
+  image:
+    name: "google/cloud-sdk"
+    tag: "slim"
+  # file name without .tar.gz extension located on gcs_storage/bucket/directory
+  archiveFileName: "semaphore-YYYY-MM-DD_HH:MM"
+  # file name extracted from archive file
+  pgDumpFileName: "database-dump.sql"
+  backupBeforeRestore: true
+  secret:
+    useExisting: false
+    name: "semaphore-database-restore-gcp"
+    keys:
+      projectId: "projectId"
+      keyJson: "key.json"
+      serviceAccountEmail: "serviceAccountEmail"
+      bucket: "bucket"
+      bucketDirectory: "bucketDirectory"
+  gcp:
+    projectId: ""
+    serviceAccountEmail: ""
+    bucket: ""
+    bucketDirectory: ""
+    keyJson: "{}"
+    # example how to set value
+    #keyJson: |
+    #  {
+    #    "type": "service_account",
+    #    "project_id": "project-identifier-xxxxxx",
+    #    "private_key_id": "{private-key-id}",
+    #    "private_key": "-----BEGIN PRIVATE KEY-----\n{first line}\n{second line}\n...\n{last line}\n-----END PRIVATE KEY-----\n",
+    #    "client_email": "some-email...@...gserviceaccount.com",
+    #    "client_id": "{client-id}",
+    #    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    #    "token_uri": "https://oauth2.googleapis.com/token",
+    #    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    #    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/{client_email}"
+    #  }
+  psql:
     extraOptions: ""

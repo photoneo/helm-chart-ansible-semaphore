@@ -1,6 +1,6 @@
 {{- if .Values.database.enabled }}
-{{- if .Values.database.persistenceEnabled }}
-{{- if not .Values.database.persistentVolumeClaimNameOverride }}
+{{- if .Values.database.persistence.enabled}}
+{{- if not .Values.database.persistence.volumeClaimNameOverride }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -9,10 +9,10 @@ metadata:
   name: {{ include "semaphore.database.volume.name" . }}
 spec:
   accessModes:
-    - ReadWriteOnce
+    {{ toYaml .Values.database.persistence.accessModes | indent 4}}
   resources:
     requests:
-      storage: {{ include "semaphore.database.volume.size" . }}
+      storage: "{{ .Values.database.persistence.volumeSize }}"
 {{- end }}
 {{- end }}
 {{- end }}
