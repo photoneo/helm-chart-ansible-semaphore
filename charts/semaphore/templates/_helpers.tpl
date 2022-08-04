@@ -92,7 +92,7 @@ Database volume name
 
 
 {{/*
-Semaphore configuration secret resource name
+Semaphore configuration config map resource name
 */}}
 {{- define "semaphore.config.configMapName" -}}
 {{- include "semaphore.name" . }}-configuration
