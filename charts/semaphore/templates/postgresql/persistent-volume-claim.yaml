@@ -12,7 +12,7 @@ spec:
     {{ toYaml .Values.database.persistence.accessModes | indent 4}}
   resources:
     requests:
-      storage: "{{ default "10Gi" .Values.database.persistence.volumeSize }}"
+      storage: "{{ .Values.database.persistence.volumeSize }}"
 {{- end }}
 {{- end }}
 {{- end }}
