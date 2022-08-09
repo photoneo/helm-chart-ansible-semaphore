@@ -272,11 +272,6 @@ spec:
           secret:
             secretName: {{ .Values.semaphore.existingSecretSSHDir }}
         {{- end }}
-        {{- if .Values.database.persistence.enabled }}
-        - name: semaphore-database-volume-storage
-          persistentVolumeClaim:
-            claimName: {{ include "semaphore.database.volume.name" . }}
-        {{- end }}
         {{- if .Values.restore.enabled }}
         - name: shared-database-restore-directory
           emptyDir: { }
