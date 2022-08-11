@@ -1,4 +1,4 @@
-{{- if .Values.database.enabled }}
+{{- if .Values.database.createInstance }}
 {{- if .Values.database.persistence.enabled}}
 {{- if not .Values.database.persistence.volumeClaimNameOverride }}
 ---
