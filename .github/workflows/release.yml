@@ -18,3 +18,4 @@ jobs:
           owner: Photoneo
           branch: gh-pages
           target_dir: .
+          linting: off
