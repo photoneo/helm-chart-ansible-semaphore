@@ -9,6 +9,7 @@ semaphore:
   image:
     name: "ansiblesemaphore/semaphore"
     tag: "v2.8.53"
+  imagePullSecrets: []
   imagePullPolicy: "IfNotPresent"
   containerPort: 3000
   # created as: https://kubernetes.io/docs/concepts/configuration/secret/#use-case-pod-with-ssh-keys

@@ -20,6 +20,7 @@ The following table lists the configurable parameters of the **Ansible Semaphore
 | `chartNameOverride`                            | Chart name override                                                         | ""                                          |
 | `semaphore.image.name`                         | Image of the semaphore application                                          | "ansiblesemaphore/semaphore"                |
 | `semaphore.image.tag`                          | Image of the semaphore application                                          | "v2.8.53"                                   |
+| `semaphore.imagePullSecrets`                   | The image pull secrets                                                      | []                                          |
 | `semaphore.imagePullPolicy`                    | The image pull policy                                                       | "IfNotPresent"                              |
 | `semaphore.containerPort`                      | Default application container port                                          | 3000                                        |
 | `semaphore.existingSecretSSHDir`               | Secret containing SSH files to be loaded into the ssh directory             | ""                                          |
