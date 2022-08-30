@@ -3,10 +3,10 @@ entries:
   semaphore:
   - apiVersion: v2
     appVersion: 2.8.53
-    created: "2022-08-11T13:22:05.933345345Z"
+    created: "2022-08-30T10:09:03.787530462Z"
     description: 'A Helm chart for deploying semaphore with(out) database and periodical
       backups. '
-    digest: aef69fd667301233cfc566fcfca08b350d1ab2b9424500e9c6d533c77c808274
+    digest: 55e9635689acc5a5a47bbf3344671b1f8b795a8672bb93beccf6b1526c6b2573
     name: semaphore
     type: application
     urls:
@@ -56,4 +56,4 @@ entries:
     urls:
     - semaphore-0.1.0.tgz
     version: 0.1.0
-generated: "2022-08-11T13:22:05.932254944Z"
+generated: "2022-08-30T10:09:03.786097654Z"
