@@ -16,6 +16,8 @@ spec:
         {{- include "semaphore.selectorLabels" . | nindent 8 }}
     spec:
       restartPolicy: Always
+      imagePullSecrets:
+        {{- toYaml .Values.semaphore.imagePullSecrets | nindent 8 }}
       initContainers:
         - name: wait-for-database
           image: alpine:latest
