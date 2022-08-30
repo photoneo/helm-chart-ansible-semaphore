@@ -247,6 +247,10 @@ spec:
             - mountPath: /home/semaphore/config.json
               name: semaphore-config-file
               subPath: config.json
+          {{- if .Values.semaphore.existingSecretSSHDir }}
+            - mountPath: /home/semaphore/.ssh
+              name: ssh-keys
+          {{- end }}
           readinessProbe:
             httpGet:
               port: {{ default 3000 .Values.semaphore.containerPort | int }}
@@ -271,6 +275,7 @@ spec:
         - name: ssh-keys
           secret:
             secretName: {{ .Values.semaphore.existingSecretSSHDir }}
+            defaultMode: 0600
         {{- end }}
         {{- if .Values.restore.enabled }}
         - name: shared-database-restore-directory
