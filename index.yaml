@@ -3,6 +3,17 @@ entries:
   semaphore:
   - apiVersion: v2
     appVersion: 2.8.53
+    created: "2022-09-18T12:08:19.154592748Z"
+    description: 'A Helm chart for deploying semaphore with(out) database and periodical
+      backups. '
+    digest: f8eccefe75719cf034f92094f046b099e4395c4b03fc739493d18653488cf50e
+    name: semaphore
+    type: application
+    urls:
+    - https://Photoneo.github.io/helm-chart-ansible-semaphore/semaphore-1.0.2.tgz
+    version: 1.0.2
+  - apiVersion: v2
+    appVersion: 2.8.53
     created: "2022-08-30T10:09:03.787530462Z"
     description: 'A Helm chart for deploying semaphore with(out) database and periodical
       backups. '
@@ -56,4 +67,4 @@ entries:
     urls:
     - semaphore-0.1.0.tgz
     version: 0.1.0
-generated: "2022-08-30T10:09:03.786097654Z"
+generated: "2022-09-18T12:08:19.152740552Z"
